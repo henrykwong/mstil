@@ -1,11 +1,11 @@
 Package: mstil
 Type: Package
-Title: Multivariate Skew t distribution with Independent Logistic skewing function (mstil)
+Title: Multivariate Skew t distribution with Independent Logistic skewing function (MSTIL)
 Version: 0.1.0
 Author: Hok Shing Kwong
 Maintainer: Me <hokshing.kwong@manchester.ac.uk>
-Description: Inference of Multivariate Skew t distribution with Independent Logistic skewing function (MSTIL)
-License: GPL-3
+Description: Maximum Likelihood Estimations for Multivariate Skew t distribution with Independent Logistic skewing function (MSTIL).
+License: GPL-3 + file LICENSE
 Encoding: UTF-8
 LazyData: TRUE
 Imports:
@@ -13,5 +13,3 @@ Imports:
 RoxygenNote: 7.1.0
 Depends: 
     R (>= 2.10)
-Suggests: 
-    testthat

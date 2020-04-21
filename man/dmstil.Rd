@@ -30,9 +30,12 @@ gives a numeric vector of length n.
 This function return the quasi density function for mstil.
 }
 \examples{
-Not run:
+# Not run:
 data(RiverFlow)
-k = ncol(RiverFlow)
-dmstil(log(river_flow), lambda = diag(k), delta = rep(0,k), Ainv = diag(k), nu = 2, sample.mc = 10000, log.p = FALSE)
-dmstil()
+k <- ncol(RiverFlow)
+lambda <- diag(k)
+delta <- rep(0,k)
+Ainv <- diag(k)
+nu <- 2
+dmstil(log(RiverFlow), lambda, delta, Ainv, nu)
 }

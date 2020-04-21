@@ -33,9 +33,11 @@ a list with components:
 This function estimate the value of log likelihood function
 }
 \examples{
-Not run:
 data(RiverFlow)
-k = ncol(RiverFlow)
-mstil.logL( log(river_flow), lambda = diag(k), delta = rep(0,k), Ainv = diag(k), nu = 2, sample.mc = 10000, q = 0.95 )
-mstil.logL()
+k <- ncol(RiverFlow)
+lambda <- diag(k)
+delta <- rep(0,k)
+Ainv <- diag(k)
+nu <- 2
+mstil.logL(log(RiverFlow), lambda, delta, Ainv, nu)
 }

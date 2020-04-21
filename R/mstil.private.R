@@ -26,10 +26,10 @@ dmstil.grad = function( x, lambda, delta, Ainv, nu, u, sample.mc = 10000){
 
   lambdaz = z %*% lambda
   lambdau = u %*% lambda
-  Gz = plogis( lambdaz, log.p = TRUE)
-  Gu = plogis( lambdau, log.p = TRUE )
-  gz = dlogis( lambdaz, log = TRUE)
-  gu = dlogis( lambdau, log = TRUE )
+  Gz = stats::plogis( lambdaz, log.p = TRUE)
+  Gu = stats::plogis( lambdau, log.p = TRUE )
+  gz = stats::dlogis( lambdaz, log = TRUE)
+  gu = stats::dlogis( lambdau, log = TRUE )
 
   gGz = exp( gz - Gz )
   gGu = exp( gu - Gu )
@@ -101,7 +101,7 @@ dmstil.grad.nu = function( x, lambda, delta, Ainv, nu, u, sample.mc = 10000, tol
   if ( missing( u ) ){
     u = mvtnorm::rmvt( sample.mc, delta = rep(0, k), sigma = diag(k), df = nu )
   }
-  Gu = plogis( u %*% lambda, log.p = TRUE)
+  Gu = stats::plogis( u %*% lambda, log.p = TRUE)
   rsG = rowSums( Gu )
   z = t( ( t( x ) - delta )  ) %*% t(Ainv)
   dnu_u = ( dmvt2( u, rep(0,p), diag(p),df = exp(log(nu) + tol )) - dmvt2( u, rep(0,p), diag(p), df = nu ) ) / tol

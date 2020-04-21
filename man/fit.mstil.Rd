@@ -72,7 +72,6 @@ a list with components:
 This function finds the penalised quasi likelihood estiamtes for mstil.
 }
 \examples{
-Not run:
-fit.mstil(log(RiverFlow))
-fit.mstil()
+# fit a 2 dimensional mstil distribution 
+fit.mstil(log(RiverFlow[,1:2]))
 }

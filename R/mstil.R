@@ -9,11 +9,14 @@
 #' @param log.p a logical value. If TRUE, return the probability density function in logarithmic scale. By default FALSE.
 #' @return gives a numeric vector of length n.
 #' @export
-#' @examples Not run:
+#' @examples # Not run:
 #' @examples data(RiverFlow)
-#' @examples k = ncol(RiverFlow)
-#' @examples dmstil(log(river_flow), lambda = diag(k), delta = rep(0,k), Ainv = diag(k), nu = 2, sample.mc = 10000, log.p = FALSE)
-#' dmstil()
+#' @examples k <- ncol(RiverFlow)
+#' @examples lambda <- diag(k)
+#' @examples delta <- rep(0,k)
+#' @examples Ainv <- diag(k)
+#' @examples nu <- 2
+#' @examples dmstil(log(RiverFlow), lambda, delta, Ainv, nu)
 dmstil = function( x, lambda, delta, Ainv, nu, u, sample.mc = 10000, log.p = FALSE ){
   if (is.data.frame(x)) x = as.matrix(x)
   if ( missing( u ) ){
@@ -21,8 +24,8 @@ dmstil = function( x, lambda, delta, Ainv, nu, u, sample.mc = 10000, log.p = FAL
   }
   z = t( ( t( x ) - delta )  ) %*% t(Ainv)
 
-  Gz = plogis( z %*% lambda, log.p = TRUE)
-  Gu = plogis( u %*% lambda, log.p = TRUE )
+  Gz = stats::plogis( z %*% lambda, log.p = TRUE)
+  Gu = stats::plogis( u %*% lambda, log.p = TRUE )
 
   res = rowSums( Gz ) + dmvt2( x, delta = delta, Ainv = Ainv, df = nu, log = TRUE ) - log( mean( exp( rowSums( Gu  ) ) ) )
 
@@ -45,11 +48,13 @@ dmstil = function( x, lambda, delta, Ainv, nu, u, sample.mc = 10000, log.p = FAL
 #' \item{logL}{the estimate of the log-likelihood function.}
 #' \item{logL.upper}{the upper bound of the estimated log-likelihood function.}
 #' @export
-#' @examples Not run:
 #' @examples data(RiverFlow)
-#' @examples k = ncol(RiverFlow)
-#' @examples mstil.logL( log(river_flow), lambda = diag(k), delta = rep(0,k), Ainv = diag(k), nu = 2, sample.mc = 10000, q = 0.95 )
-#' mstil.logL()
+#' @examples k <- ncol(RiverFlow)
+#' @examples lambda <- diag(k)
+#' @examples delta <- rep(0,k)
+#' @examples Ainv <- diag(k)
+#' @examples nu <- 2
+#' @examples mstil.logL(log(RiverFlow), lambda, delta, Ainv, nu)
 mstil.logL = function( x, lambda, delta, Ainv, nu, u, sample.mc = 10000, q = 0.95 ){
   if (is.data.frame(x)) x = as.matrix(x)
   n = nrow(x)
@@ -59,13 +64,13 @@ mstil.logL = function( x, lambda, delta, Ainv, nu, u, sample.mc = 10000, q = 0.9
     u = mvtnorm::rmvt( sample.mc, delta = rep(0, dim( x )[ 2 ]), sigma = diag(dim( x )[ 2 ]), df = nu )
   }
 
-  Gz = plogis( z %*% lambda, log.p = TRUE)
-  Gu = plogis( u %*% lambda, log.p = TRUE)
+  Gz = stats::plogis( z %*% lambda, log.p = TRUE)
+  Gu = stats::plogis( u %*% lambda, log.p = TRUE)
 
   exp_Gu = exp(rowSums(Gu))
-  E_Gu_sd = sd(exp_Gu) / sqrt(nrow(u))
+  E_Gu_sd = stats::sd(exp_Gu) / sqrt(nrow(u))
   E_Gu = mean( exp_Gu )
-  spread = abs(qnorm((1-q)/2)) * E_Gu_sd
+  spread = abs(stats::qnorm((1-q)/2)) * E_Gu_sd
 
   res = sum(rowSums( Gz ) + dmvt2( x, delta = delta, Ainv = Ainv, df = nu, log = TRUE ))
   return( list( logL.lower = res - n * log(E_Gu + spread), logL = res - n * log(E_Gu), logL.upper = res - n * log(E_Gu - spread)))
@@ -97,20 +102,19 @@ mstil.logL = function( x, lambda, delta, Ainv, nu, u, sample.mc = 10000, q = 0.9
 #' \item{fun.value}{a numeric vector of the fitted penalised quasi log-likelihood function at each iteration.}
 #' \item{time}{a non-negative numeric vector, records the time elapsed after each iteration.}
 #' @export
-#' @examples Not run:
-#' @examples fit.mstil(log(RiverFlow))
-#' fit.mstil()
+#' @examples # fit a 2 dimensional mstil distribution 
+#' @examples fit.mstil(log(RiverFlow[,1:2]))
 fit.mstil = function( x, lambda, delta, Ainv, nu, u, step.size = 0.1, dim.rate = 0.01, iter.sgd = 100, sample.mc = 10000, maxit.bfgs = 10,  maxit = 1000, convergence.n = 5, sample.logL = 1000000, q = 0.025,lambda.penalty = 0, print.progress = TRUE){
   if (is.data.frame(x)) x = as.matrix(x)
   k = dim(x)[2]
   if (missing(lambda)){
-    lambda=matrix(runif(k*k, -0.01, 0.01 ),nrow=k)
+    lambda=matrix(stats::runif(k*k, -0.01, 0.01 ),nrow=k)
   }
   if( missing(delta)){
     delta = colMeans(x[sample(nrow(x),round(nrow(x)/10)),])
   }
   if(missing(Ainv)){
-    Ainv = solve(t(chol(cov(x[sample(nrow(x),round(nrow(x)/10)),]))))
+    Ainv = solve(t(chol(stats::cov(x[sample(nrow(x),round(nrow(x)/10)),]))))
   }
   if (missing(nu)){
     nu = 10
