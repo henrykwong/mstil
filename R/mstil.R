@@ -148,11 +148,11 @@ fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.
 
   start_time <- Sys.time()
 
-  lik <- sum(dmvt2(x, delta, Ainv, nu, log = TRUE))
-  lik_rec <- lik
-  lik_rec_lower <- lik
-  lik_rec_upper <- lik
-  lik_ori <- lik
+  lik <- mstil.logL(x, res$lambda, res$delta, res$Ainv, res$nu, sample.mc = sample.logL, q = q)
+  lik_rec <- lik$logL
+  lik_rec_lower <- lik$logL.lower
+  lik_rec_upper <- lik$logL.upper
+  lik_ori <- lik$logL
 
   time_rec <- 0
 
@@ -173,21 +173,19 @@ fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.
     if (print.progress) {
       cat("\r", "Iterationa : ", (i - 1), "Current Likelihood : ", round(lik_rec[length(lik_rec)]), "Maximum Likelihood : ", round(max(lik_rec)), "\t")
     }
-
-
-    if (all(lik_rec[max((i - convergence.n + 1), 1):i] < max(lik_rec)) && i > (convergence.n + 1)) {
-      if (print.progress) {
-        cat("\n", "converged!")
+    
+    if ( i > convergence.n ){
+      if ( all( lik_rec[i-convergence.n] > lik_rec[ (i-convergence.n+1) : i ])){
+        if (print.progress) cat("\n", "converged!")
+        return(list(logL = lik_rec, par = res_rec, logL.lower = lik_rec_lower, logL.upper = lik_rec_upper, fun.value = lik_ori, time = time_rec))
+        break
       }
-      return(list(logL = lik_rec, par = res_rec, logL.lower = lik_rec_lower, logL.upper = lik_rec_upper, fun.value = lik_ori, time = time_rec))
-      break
     }
   }
-  if (print.progress) {
-    cat("\n", "maximum number of iteration reached!")
-  }
+  if (print.progress) cat("\n", "maximum number of iteration reached!")
   return(list(logL = lik_rec, par = res_rec, logL_lower = lik_rec_lower, logL_upper = lik_rec_upper, fun_value = lik_ori, time = time_rec))
 }
+
 
 
 
@@ -246,7 +244,6 @@ fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, step.size = 0.01, 
   res$delta <- delta
   res$Ainv <- Ainv
   res$nu <- nu
-
   start_time <- Sys.time()
   lik_rec <- c()
   res_rec <- list()
@@ -261,11 +258,13 @@ fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, step.size = 0.01, 
     res_rec[[i]] <- res
     time_rec <- c(time_rec, difftime(Sys.time(), start_time, units = "secs"))
 
-    if (all(lik_rec[max((i - convergence.n + 1), 1):i] < max(lik_rec)) && i > (convergence.n + 1)) {
-      if (print.progress) cat("\n", "converged!")
-      return(list(logL = lik_rec, par = res_rec, time = time_rec))
-      break
-    }
+   if ( i > convergence.n ){
+     if ( all( lik_rec[i-convergence.n] > lik_rec[ (i-convergence.n+1) : i ])){
+        if (print.progress) cat("\n", "converged!")
+        return(list(logL = lik_rec, par = res_rec, time = time_rec))
+        break
+     }
+   }
 
     if (print.progress) {
       cat("\r", "Iterationa : ", i, "Current Likelihood : ", round(lik_rec[length(lik_rec)]), "Maximum Likelihood : ", round(max(lik_rec)), "\t")
@@ -332,7 +331,7 @@ fit.fmmstil.r <- function(x, K, omega, lambda, delta, Ainv, nu, maxit.bfgs = 100
     for (i in 1:K) {
       lambda[[i]] <- diag(rep(0, k))
       delta[[i]] <- colMeans(x[which(kmeans_cluster$cluster == i), ])
-      Ainv[[i]] <- solve(t(chol(stats::cov(x[which(kmeans_cluster$cluster == i), ]))))
+      Ainv[[i]] <- solve(t(chol(stats::cov(x[which(kmeans_cluster$cluster == i), ]))))*lower.tri(diag(k),diag = TRUE)
       nu[[i]] <- 10
     }
   }
@@ -355,10 +354,12 @@ fit.fmmstil.r <- function(x, K, omega, lambda, delta, Ainv, nu, maxit.bfgs = 100
     lik_rec <- c(lik_rec, logL)
     res_rec[[i]] <- res
     time_rec <- c(time_rec, difftime(Sys.time(), start_time, units = "secs"))
-    if ((length(lik_rec) > 5) & (logL - max(lik_rec[1:(length(lik_rec) - 1)], -Inf) < convergence.tol)) {
-      if (print.progress) cat("\n", "converged!")
-      return(list(logL = lik_rec, par = res_rec, time = time_rec))
-      break
+    if (i > 5){
+      if ( lik_rec[i] - lik_rec[i-1] < convergence.tol ){
+        if (print.progress) cat("\n", "converged!")
+        return(list(logL = lik_rec, par = res_rec, time = time_rec))
+        break
+      }
     }
 
     if (print.progress) {
@@ -407,7 +408,7 @@ fit.fmmstil.r <- function(x, K, omega, lambda, delta, Ainv, nu, maxit.bfgs = 100
 #' # Not run:
 dmstil.r <- function(x, lambda, delta, Ainv, nu, log.p = FALSE) {
   if (is.data.frame(x)) x <- as.matrix(x)
-  if (diag(diag(lambda)) != lambda) stop("lambda must be a diagonal matrix!")
+  if (any(diag(diag(lambda)) != lambda)) stop("lambda must be a diagonal matrix!")
   k <- ncol(x)
   if (nrow(lambda) != k) stop("number of rows of lambda is not equal to dimension of x!")
   if (length(delta) != k) stop("length of delta is not equal to dimension of x!")
@@ -451,7 +452,7 @@ fit.mstil.r <- function(x, lambda, delta, Ainv, nu, maxit = 1000) {
     Ainv[upper.tri(Ainv, diag = FALSE)] <- 0
   }
   if (missing(nu)) nu <- 10
-  if (diag(diag(lambda)) != lambda) stop("lambda must be a diagonal matrix!")
+  if (any((lambda*diag(k)) != lambda)) stop("lambda must be a diagonal matrix!")
   if (nrow(lambda) != k) stop("number of rows of lambda is not equal to dimension of x!")
   if (length(delta) != k) stop("length of delta is not equal to dimension of x!")
   if (ncol(Ainv) != nrow(Ainv) | length(Ainv) != k^2 | any(Ainv[upper.tri(Ainv)] != 0)) stop("Ainv is of wrong size or is not an lower triangular matrix!")

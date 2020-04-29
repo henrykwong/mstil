@@ -173,6 +173,7 @@ dmstil.grad.weighted <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 1
   grad <- -(nu + k) / 2 * grad + sum(w) * diag(1 / diag(Ainv))
   dAinv_1 <- grad
   dAinv_2 <- t(t(matrix(colSums(w * y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
+
   dmu_1 <- colSums(w * t(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C))))
   dmu_2 <- as.vector(-(t(colSums(w * gGz)) %*% (t(lambda) %*% Ainv)))
   dlambda_1 <- matrix(colSums(w * gGz[, rep(1:p, each = k)] * t(xA[rep(1:k, p), ])), nrow = k)
@@ -326,11 +327,12 @@ dmstil.r.grad.weighted <- function(x, w, lambda, delta, Ainv, nu) {
   t1 <- matrix(rep(1:k, k), nrow = k)[lower.tri(diag(k), diag = TRUE)]
   t2 <- rep(1:k, k:1)
   grad <- matrix(0, nrow = k, ncol = k)
-  grad_ <- colSums(2 / nu * (y[, t2] * t(xA)[, t1]) * C)
+  grad_ <- colSums( w * 2 / nu * (y[, t2] * t(xA)[, t1]) * C)
   grad[lower.tri(grad, diag = TRUE)] <- grad_
-  grad <- -(nu + k) / 2 * grad + n * diag(1 / diag(Ainv))
+  grad <- -(nu + k) / 2 * grad + sum(w) * diag(1 / diag(Ainv))
   dAinv_1 <- grad
   dAinv_2 <- t(t(matrix(colSums(w * y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
+  
   dmu_1 <- colSums(w * t(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C))))
   dmu_2 <- as.vector(-(t(colSums(w * gGz)) %*% (t(lambda) %*% Ainv)))
   dlambda_1 <- diag(colSums(w * gGz * t(xA)))
