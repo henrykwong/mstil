@@ -13,7 +13,7 @@ mstil.logL(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, q = 0.95)
 
 \item{delta}{a numeric vector of length k, representing the location parameter.}
 
-\item{Ainv}{an upper triangular numeric matrix of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.}
+\item{Ainv}{an lower triangular numeric matrix of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.}
 
 \item{nu}{a positive value representing the degree of freedom/}
 
@@ -33,11 +33,12 @@ a list with components:
 This function estimate the value of log likelihood function
 }
 \examples{
-data(RiverFlow)
-k <- ncol(RiverFlow)
-lambda <- diag(k)
-delta <- rep(0,k)
-Ainv <- diag(k)
-nu <- 2
-mstil.logL(log(RiverFlow), lambda, delta, Ainv, nu)
+# Not run:
+# data(RiverFlow)
+# k <- ncol(RiverFlow)
+# lambda <- diag(k)
+# delta <- rep(0,k)
+# Ainv <- diag(k)
+# nu <- 2
+# mstil.logL(log(RiverFlow), lambda, delta, Ainv, nu)
 }
