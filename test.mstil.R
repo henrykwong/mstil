@@ -8,7 +8,7 @@ generate_skew = function( p, data_size ){
 }
 set.seed(3)
 K = 2
-k = 5
+k = 10
 membership = c()
 n1 = round(runif(1, 100,500))*5
 membership = c(membership,rep(1,n1))

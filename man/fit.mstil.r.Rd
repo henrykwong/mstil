@@ -4,7 +4,7 @@
 \alias{fit.mstil.r}
 \title{This function finds the maximum likelihood estimations for restricted mstil.}
 \usage{
-fit.mstil.r(x, lambda, delta, Ainv, nu, maxit = 1000)
+fit.mstil.r(x, lambda, delta, Ainv, nu, maxit = 1000, max.lambda = Inf)
 }
 \arguments{
 \item{x}{a n x k matrix, representing n k-variate samples.}
@@ -18,6 +18,8 @@ fit.mstil.r(x, lambda, delta, Ainv, nu, maxit = 1000)
 \item{nu}{a positive value representing the degree of freedom/}
 
 \item{maxit}{a positive integer, representing the maximum number of iterations. By default 1000.}
+
+\item{max.lambda}{positive value, representign the maximum lambda accepted.}
 }
 \value{
 a list with components:

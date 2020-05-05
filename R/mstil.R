@@ -112,6 +112,7 @@ mstil.logL <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, q = 0.9
 #' @param sample.logL a positive integer, representing the number of monte carlo samples used to estimate the current log-likelihood. By default 1000000.
 #' @param q a value in range (0.5,1), representing the 2-sided confidence interval percentage. By default 0.95.
 #' @param lambda.penalty a non-negative value, representing the parameter of the penalty term. By default 0.
+#' @param max.lambda positive value, representign the maximum lambda accepted. 
 #' @param print.progress a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.
 #' @return a list with components:
 #' \item{logL}{a vector of the estimated log-likelihood function after each itereation.}
@@ -124,10 +125,10 @@ mstil.logL <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, q = 0.9
 #' @examples
 #' # Not run:
 #' # fit.mstil(log(RiverFlow))
-fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.01, iter.sgd = 100, tol.sgd = 1e-5, sample.mc = 10000, maxit.bfgs = 10, maxit = 1000, convergence.n = 5, sample.logL = 1000000, q = 0.95, lambda.penalty = 0, print.progress = TRUE) {
+fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.01, iter.sgd = 100, tol.sgd = 1e-5, sample.mc = 10000, maxit.bfgs = 10, maxit = 1000, convergence.n = 5, sample.logL = 1000000, q = 0.95, max.lambda = Inf, lambda.penalty = 0, print.progress = TRUE) {
   if (is.data.frame(x)) x <- as.matrix(x)
   k <- dim(x)[2]
-  if (missing(lambda)) lambda <- diag(stats::runif(k, -0.01, 0.01))
+  if (missing(lambda)) lambda <- 0 * diag(k)
   if (missing(delta)) delta <- colMeans(x)
   if (missing(Ainv)) {
     Ainv <- solve(t(chol(stats::cov(x))))
@@ -161,7 +162,7 @@ fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.
 
 
   for (i in 2:(maxit + 1)) {
-    res <- fit.mstil.qcmle(x, res$lambda, res$delta, res$Ainv, res$nu, maxit = maxit.bfgs, sample.mc = sample.mc, lambda.penalty = lambda.penalty)
+    res <- fit.mstil.qcmle(x, res$lambda, res$delta, res$Ainv, res$nu, maxit = maxit.bfgs, sample.mc = sample.mc, lambda.penalty = lambda.penalty, max.lambda = max.lambda)
     res$nu <- fit.mstil.sgd(x, res$lambda, res$delta, res$Ainv, nu, tol = tol.sgd, step.size = step.size / length(x), dim.rate = dim.rate, iter.sgd = iter.sgd, sample.mc = sample.mc)
     lik <- mstil.logL(x, res$lambda, res$delta, res$Ainv, res$nu, sample.mc = sample.logL, q = q)
     res_rec[[i]] <- res
@@ -197,6 +198,8 @@ fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.
 #' @param delta list of K numeric vectors of length k, representing the location parameter.
 #' @param Ainv list of lower triangular numeric matrices of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.
 #' @param nu list of positive values representing the degree of freedom.
+#' @param init.cluster initial cluster to help set initial parameters
+#' @param init.method method to find initial parameters. 
 #' @param step.size a positive value representing the step size used in fitting nu. By default 0.1.
 #' @param dim.rate a non-negative value representing the step size diminishing rate used in fitting nu. By default 0.01.
 #' @param iter.sgd a positive integer representing the number of iterations used in fitting nu. By default 100.
@@ -208,6 +211,7 @@ fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.
 #' @param convergence.n a positive integer, the algorithm stops when estimated log-likelihood does not increase in "convergence.n" consecutive iterations. By default 5.
 #' @param sample.logL a positive integer, representing the number of monte carlo samples used to estimate the current log-likelihood. By default 1000000.
 #' @param lambda.penalty a non-negative value, representing the parameter of the penalty term. By default 0.
+#' @param max.lambda positive value, representign the maximum lambda accepted. 
 #' @param print.progress a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.
 #' @return a list with components:
 #' \item{logL}{a vector of the estimated log-likelihood function after each itereation.}
@@ -216,26 +220,26 @@ fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.
 #' @export
 #' @examples
 #' # Not run:
-fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, step.size = 0.01, dim.rate = 0.01, iter.sgd = 100, tol.sgd = 1e-5, sample.mc = 10000, maxit.bfgs = 10, maxit.qmle = 1, maxit = 1000, convergence.n = 5, sample.logL = 1000000, lambda.penalty = 0, print.progress = TRUE) {
+fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, init.cluster, init.method, step.size = 0.01, dim.rate = 0.01, iter.sgd = 100, tol.sgd = 1e-5, sample.mc = 10000, maxit.bfgs = 10, maxit.qmle = 1, maxit = 1000, convergence.n = 5, sample.logL = 1000000, lambda.penalty = 0, max.lambda = Inf, print.progress = TRUE) {
   if (is.data.frame(x)) x <- as.matrix(x)
   n <- nrow(x)
   k <- ncol(x)
   res <- list()
 
   if (any(missing(omega), missing(lambda), missing(delta), missing(Ainv), missing(nu))) {
-    kmeans_cluster <- stats::kmeans(x[sample(n, round(n / 1.5)), ], K)
-    omega <- table(kmeans_cluster$cluster) / length(kmeans_cluster$cluster)
+    if (missing(init.method)) init.method = fit.mstil.r
     lambda <- list()
     delta <- list()
     Ainv <- list()
     nu <- list()
-    for (i in 1:K) {
-      first_fitted <- fit.mstil(x[which(kmeans_cluster$cluster == i), ], print.progress = FALSE, maxit = 1, maxit.bfgs = 5)
-      mm <- which.max(first_fitted$logL)
-      lambda[[i]] <- first_fitted$par[[mm]]$lambda
-      delta[[i]] <- first_fitted$par[[mm]]$delta
-      Ainv[[i]] <- first_fitted$par[[mm]]$Ainv
-      nu[[i]] <- first_fitted$par[[mm]]$nu
+    if (missing(init.cluster)) init.cluster <- stats::kmeans(x, K)$cluster
+    omega <- table(init.cluster) / n
+    for (i in 1:K){
+      fit.temp <- init.method(x[which(init.cluster == unique(init.cluster)[i]), ])
+      lambda[[i]] <- fit.temp$lambda
+      delta[[i]] <- fit.temp$delta
+      Ainv[[i]] <- fit.temp$Ainv
+      nu[[i]] <- fit.temp$nu
     }
   }
 
@@ -267,11 +271,11 @@ fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, step.size = 0.01, 
    }
 
     if (print.progress) {
-      cat("\r", "Iterationa : ", i, "Current Likelihood : ", round(lik_rec[length(lik_rec)]), "Maximum Likelihood : ", round(max(lik_rec)), "\t")
+      cat("\r", "Iteration : ", i, "Current Likelihood : ", round(lik_rec[length(lik_rec)]), "Maximum Likelihood : ", round(max(lik_rec)), "\t")
     }
     for (j in 1:K) {
       for (jj in 1:maxit.qmle) {
-        res1 <- fit.mstil.weighted.qmle(x, w[, j], lambda = res$lambda[[j]], delta = res$delta[[j]], Ainv = res$Ainv[[j]], nu = res$nu[[j]], sample.mc = sample.mc, lambda.penalty = lambda.penalty, maxit = maxit.bfgs)
+        res1 <- fit.mstil.weighted.qmle(x, w[, j], lambda = res$lambda[[j]], delta = res$delta[[j]], Ainv = res$Ainv[[j]], nu = res$nu[[j]], sample.mc = sample.mc, lambda.penalty = lambda.penalty, max.lambda = max.lambda, maxit = maxit.bfgs)
         res$lambda[[j]] <- res1$lambda
         res$delta[[j]] <- res1$delta
         res$Ainv[[j]] <- res1$Ainv
@@ -304,8 +308,11 @@ fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, step.size = 0.01, 
 #' @param delta list of K numeric vectors of length k, representing the location parameter.
 #' @param Ainv list of lower triangular numeric matrices of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.
 #' @param nu list of positive values representing the degree of freedom.
+#' @param init.cluster initial cluster to help set initial parameters
+#' @param init.method method to find initial parameters. 
 #' @param maxit.bfgs a positive integer, representing the maximum number of iterations used in the MLE step. By default 1000.
 #' @param maxit a positive integer, representing the maximum number of iterations. By default 1000.
+#' @param max.lambda positive value, representign the maximum lambda accepted. 
 #' @param convergence.tol the maximum tolerance before the algorithm stops.
 #' @param print.progress a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.
 #' @return a list with components:
@@ -315,26 +322,30 @@ fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, step.size = 0.01, 
 #' @export
 #' @examples
 #' # Not run:
-fit.fmmstil.r <- function(x, K, omega, lambda, delta, Ainv, nu, maxit.bfgs = 1000, maxit = 1000, convergence.tol = 0.01, print.progress = TRUE) {
+fit.fmmstil.r <- function(x, K, omega, lambda, delta, Ainv, nu, init.cluster, init.method, maxit.bfgs = 1000, maxit = 1000, max.lambda = Inf, convergence.tol = 0.01, print.progress = TRUE) {
   if (is.data.frame(x)) x <- as.matrix(x)
   n <- nrow(x)
   k <- ncol(x)
   res <- list()
 
   if (any(missing(omega), missing(lambda), missing(delta), missing(Ainv), missing(nu))) {
-    kmeans_cluster <- stats::kmeans(x, K)
-    omega <- table(kmeans_cluster$cluster) / length(kmeans_cluster$cluster)
+    if (missing(init.method)) init.method = fit.mstil.r
     lambda <- list()
     delta <- list()
     Ainv <- list()
     nu <- list()
-    for (i in 1:K) {
-      lambda[[i]] <- diag(rep(0, k))
-      delta[[i]] <- colMeans(x[which(kmeans_cluster$cluster == i), ])
-      Ainv[[i]] <- solve(t(chol(stats::cov(x[which(kmeans_cluster$cluster == i), ]))))*lower.tri(diag(k),diag = TRUE)
-      nu[[i]] <- 10
-    }
+    if (missing(init.cluster)) init.cluster <- stats::kmeans(x, K)$cluster
+    omega <- table(init.cluster) / n
+     for (i in 1:K){
+        fit.temp <- init.method(x[which(init.cluster == unique(init.cluster)[i]), ])
+        lambda[[i]] <- fit.temp$lambda
+        delta[[i]] <- fit.temp$delta
+        Ainv[[i]] <- fit.temp$Ainv
+        nu[[i]] <- fit.temp$nu
+     }
   }
+    
+    
 
   res$omega <- omega
   res$lambda <- lambda
@@ -366,7 +377,7 @@ fit.fmmstil.r <- function(x, K, omega, lambda, delta, Ainv, nu, maxit.bfgs = 100
       cat("\r", "Iteration : ", i, "Current Likelihood : ", round(lik_rec[length(lik_rec)]), "Maximum Likelihood : ", round(max(lik_rec)), "\t")
     }
     for (j in 1:K) {
-      res1 <- fit.mstil.r.weighted(x, w[, j], lambda = res$lambda[[j]], delta = res$delta[[j]], Ainv = res$Ainv[[j]], nu = res$nu[[j]], maxit = maxit.bfgs)
+      res1 <- fit.mstil.r.weighted(x, w[, j], lambda = res$lambda[[j]], delta = res$delta[[j]], Ainv = res$Ainv[[j]], nu = res$nu[[j]], maxit = maxit.bfgs, max.lambda = max.lambda)
       res$lambda[[j]] <- res1$lambda
       res$delta[[j]] <- res1$delta
       res$Ainv[[j]] <- res1$Ainv
@@ -433,6 +444,7 @@ dmstil.r <- function(x, lambda, delta, Ainv, nu, log.p = FALSE) {
 #' @param Ainv an lower triangular numeric matrix of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.
 #' @param nu a positive value representing the degree of freedom/
 #' @param maxit a positive integer, representing the maximum number of iterations. By default 1000.
+#' @param max.lambda positive value, representign the maximum lambda accepted. 
 #' @return a list with components:
 #' \item{logL}{a vector of the estimated log-likelihood function after each itereation.}
 #' \item{par}{a list of list of fitted parameters after each iteration. Within each list, "lambda" is the fitted skewing matrix, "delta" is the location parameter, "Ainv" is the reparameterised scale parameter, "nu" is the degree of freedom.}
@@ -440,12 +452,12 @@ dmstil.r <- function(x, lambda, delta, Ainv, nu, log.p = FALSE) {
 #' @export
 #' @examples
 #' # Not run:
-fit.mstil.r <- function(x, lambda, delta, Ainv, nu, maxit = 1000) {
+fit.mstil.r <- function(x, lambda, delta, Ainv, nu, maxit = 1000, max.lambda = Inf) {
   if (is.data.frame(x)) x <- as.matrix(x)
   k <- ncol(x)
   n <- nrow(x)
-
-  if (missing(lambda)) lambda <- diag(stats::runif(k, -0.01, 0.01))
+  
+  if (missing(lambda)) lambda <- 0 * diag(k)
   if (missing(delta)) delta <- colMeans(x)
   if (missing(Ainv)) {
     Ainv <- solve(t(chol(stats::cov(x))))
@@ -468,7 +480,6 @@ fit.mstil.r <- function(x, lambda, delta, Ainv, nu, maxit = 1000) {
     res <- sum(dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE))
     return(res)
   }
-
   grad <- function(param) {
     lambda <- diag(param[1:k])
     delta <- param[1:k + (k)]
@@ -480,7 +491,13 @@ fit.mstil.r <- function(x, lambda, delta, Ainv, nu, maxit = 1000) {
     return(gr)
   }
   param0 <- c(diag(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)], nu)
-  res <- stats::optim(param0, lik, grad, method = "BFGS", control = c(fnscale = -1, maxit = maxit))
+  
+  if (is.infinite(max.lambda)) optim.method = 'BFGS'
+  else optim.method = 'L-BFGS-B'
+  lower = c(rep(-max.lambda, k), rep(-Inf, length(param0) - k))
+  upper = -lower
+  
+  res <- stats::optim(param0, lik, grad, method = optim.method, control = c(fnscale = -1, maxit = maxit), lower = lower, upper = upper)
   param1 <- res$par
   lambda1 <- diag(param1[1:k])
   delta1 <- param1[1:k + (k)]

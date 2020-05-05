@@ -12,6 +12,8 @@ fit.fmmstil(
   delta,
   Ainv,
   nu,
+  init.cluster,
+  init.method,
   step.size = 0.01,
   dim.rate = 0.01,
   iter.sgd = 100,
@@ -23,6 +25,7 @@ fit.fmmstil(
   convergence.n = 5,
   sample.logL = 1e+06,
   lambda.penalty = 0,
+  max.lambda = Inf,
   print.progress = TRUE
 )
 }
@@ -40,6 +43,10 @@ fit.fmmstil(
 \item{Ainv}{list of lower triangular numeric matrices of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.}
 
 \item{nu}{list of positive values representing the degree of freedom.}
+
+\item{init.cluster}{initial cluster to help set initial parameters}
+
+\item{init.method}{method to find initial parameters.}
 
 \item{step.size}{a positive value representing the step size used in fitting nu. By default 0.1.}
 
@@ -62,6 +69,8 @@ fit.fmmstil(
 \item{sample.logL}{a positive integer, representing the number of monte carlo samples used to estimate the current log-likelihood. By default 1000000.}
 
 \item{lambda.penalty}{a non-negative value, representing the parameter of the penalty term. By default 0.}
+
+\item{max.lambda}{positive value, representign the maximum lambda accepted.}
 
 \item{print.progress}{a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.}
 }

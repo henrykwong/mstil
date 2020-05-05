@@ -12,8 +12,11 @@ fit.fmmstil.r(
   delta,
   Ainv,
   nu,
+  init.cluster,
+  init.method,
   maxit.bfgs = 1000,
   maxit = 1000,
+  max.lambda = Inf,
   convergence.tol = 0.01,
   print.progress = TRUE
 )
@@ -33,9 +36,15 @@ fit.fmmstil.r(
 
 \item{nu}{list of positive values representing the degree of freedom.}
 
+\item{init.cluster}{initial cluster to help set initial parameters}
+
+\item{init.method}{method to find initial parameters.}
+
 \item{maxit.bfgs}{a positive integer, representing the maximum number of iterations used in the MLE step. By default 1000.}
 
 \item{maxit}{a positive integer, representing the maximum number of iterations. By default 1000.}
+
+\item{max.lambda}{positive value, representign the maximum lambda accepted.}
 
 \item{convergence.tol}{the maximum tolerance before the algorithm stops.}
 
