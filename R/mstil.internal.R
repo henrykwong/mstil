@@ -275,7 +275,8 @@ dmstil.r.grad <- function(x, lambda, delta, Ainv, nu) {
   dmu <- dmu_1 + dmu_2
   dAinv <- dAinv_1 + dAinv_2
   dnu <- dnu_1
-  return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu))
+  dlnu <- dnu_1 / nu
+  return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu, dlnu = dlnu))
 }
 #' @keywords internal
 fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, lambda.penalty = 0) {
@@ -286,8 +287,8 @@ fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, la
     delta <- param[1:k + (k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
-    nu <- param[length(param)]
-    nu <- max(1, nu)
+    lnu <- param[length(param)]
+    nu <- exp(lnu)
     res <- sum(w * dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE) - lambda.penalty * sum(abs(lambda)))
     return(res)
   }
@@ -296,13 +297,14 @@ fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, la
     delta <- param[1:k + (k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
-    nu <- param[length(param)]
+    lnu <- param[length(param)]
+    nu <- exp(lnu)
     grad <- dmstil.r.grad.weighted(x, w, lambda, delta, Ainv, nu)
     grad$dlambda <- grad$dlambda - lambda.penalty * sign(lambda)
-    gr <- c(diag(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)], grad$dnu)
+    gr <- c(diag(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)], grad$dlnu)
     return(gr)
   }
-  param0 <- c(diag(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)], nu)
+  param0 <- c(diag(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)], log(nu))
   
   
   res <- stats::optim(param0, lik, grad, method = 'BFGS', control = c(fnscale = -1, maxit = maxit))
@@ -311,8 +313,8 @@ fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, la
   delta1 <- param1[1:k + (k)]
   Ainv1 <- matrix(0, nrow = k, ncol = k)
   Ainv1[lower.tri(Ainv1, diag = TRUE)] <- param1[(k + (k) + 1):(length(param1) - 1)]
-  nu1 <- param1[length(param1)]
-
+  lnu1 <- param1[length(param1)]
+  nu1 <- exp(lnu1)
   return(list(lambda = lambda1, delta = delta1, Ainv = Ainv1, nu = nu1, value = res$value))
 }
 #' @keywords internal
@@ -348,7 +350,8 @@ dmstil.r.grad.weighted <- function(x, w, lambda, delta, Ainv, nu) {
   dmu <- dmu_1 + dmu_2
   dAinv <- dAinv_1 + dAinv_2
   dnu <- dnu_1
-  return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu))
+  dlnu <- dnu / nu
+  return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu, dlnu = dlnu))
 }
 #' @keywords internal
 mstil.r.weight <- function(x, omega, lambda, delta, Ainv, nu) {

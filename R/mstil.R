@@ -416,12 +416,27 @@ fit.fmmstil.r <- function(x, K, omega, lambda, delta, Ainv, nu, init.cluster, in
 #' # Not run:
 dmstil.r <- function(x, lambda, delta, Ainv, nu, log.p = FALSE) {
   if (is.data.frame(x)) x <- as.matrix(x)
-  if (any(diag(diag(lambda)) != lambda)) stop("lambda must be a diagonal matrix!")
+  if (any(diag(diag(lambda)) != lambda)){
+    warning("lambda must be a diagonal matrix!")
+    return(rep(NaN, nrow(x)))
+  }
   k <- ncol(x)
-  if (nrow(lambda) != k) stop("number of rows of lambda is not equal to dimension of x!")
-  if (length(delta) != k) stop("length of delta is not equal to dimension of x!")
-  if (ncol(Ainv) != nrow(Ainv) | length(Ainv) != k^2 | any(Ainv[upper.tri(Ainv)] != 0)) stop("Ainv is of wrong size or is not an lower triangular matrix!")
-  if (nu < 0) stop("nu must be positive!")
+  if (nrow(lambda) != k){
+    warning("number of rows of lambda is not equal to dimension of x!")
+    return(rep(NaN, nrow(x)))
+  }
+  if (length(delta) != k){
+    warning("length of delta is not equal to dimension of x!")
+    return(rep(NaN, nrow(x)))
+  }
+  if (ncol(Ainv) != nrow(Ainv) | length(Ainv) != k^2 | any(Ainv[upper.tri(Ainv)] != 0)){
+    warning("Ainv is of wrong size or is not an lower triangular matrix!")
+    return(rep(NaN, nrow(x)))
+  }
+  if (nu < 0){
+    warning('nu is negative!')
+    return(rep(NaN, nrow(x)))
+  }
 
   z <- t((t(x) - delta)) %*% t(Ainv)
   Gz <- stats::plogis(z %*% lambda, log.p = TRUE)
@@ -472,8 +487,8 @@ fit.mstil.r <- function(x, lambda, delta, Ainv, nu, maxit = 1000, lambda.penalty
     delta <- param[1:k + (k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
-    nu <- param[length(param)]
-    nu <- max(1, nu)
+    lnu <- param[length(param)]
+    nu <- exp(lnu)
     res <- sum(dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE)) - lambda.penalty * sum(abs(lambda))
     return(res)
   }
@@ -482,13 +497,14 @@ fit.mstil.r <- function(x, lambda, delta, Ainv, nu, maxit = 1000, lambda.penalty
     delta <- param[1:k + (k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
-    nu <- param[length(param)]
+    lnu <- param[length(param)]
+    nu <- exp(lnu)
     grad <- dmstil.r.grad(x, lambda, delta, Ainv, nu)
-    gr <- c(diag(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)], grad$dnu)
+    gr <- c(diag(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)], grad$dlnu)
     gr$dlambda <- gr$dlambda - lambda.penalty * sign(lambda)
     return(gr)
   }
-  param0 <- c(diag(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)], nu)
+  param0 <- c(diag(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)], log(nu))
   
   
   res <- stats::optim(param0, lik, grad, method = 'BFGS', control = c(fnscale = -1, maxit = maxit))
@@ -497,7 +513,7 @@ fit.mstil.r <- function(x, lambda, delta, Ainv, nu, maxit = 1000, lambda.penalty
   delta1 <- param1[1:k + (k)]
   Ainv1 <- matrix(0, nrow = k, ncol = k)
   Ainv1[lower.tri(Ainv1, diag = TRUE)] <- param1[(k + (k) + 1):(length(param1) - 1)]
-  nu1 <- param1[length(param1)]
-
+  lnu1 <- param1[length(param1)]
+  nu1 <- exp(lnu1)
   return(list(lambda = lambda1, delta = delta1, Ainv = Ainv1, nu = nu1, logL = res$value))
 }
