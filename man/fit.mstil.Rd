@@ -20,7 +20,6 @@ fit.mstil(
   convergence.n = 5,
   sample.logL = 1e+06,
   q = 0.95,
-  max.lambda = Inf,
   lambda.penalty = 0,
   print.progress = TRUE
 )
@@ -55,8 +54,6 @@ fit.mstil(
 \item{sample.logL}{a positive integer, representing the number of monte carlo samples used to estimate the current log-likelihood. By default 1000000.}
 
 \item{q}{a value in range (0.5,1), representing the 2-sided confidence interval percentage. By default 0.95.}
-
-\item{max.lambda}{positive value, representign the maximum lambda accepted.}
 
 \item{lambda.penalty}{a non-negative value, representing the parameter of the penalty term. By default 0.}
 

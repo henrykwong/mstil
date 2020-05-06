@@ -58,7 +58,7 @@ dmstil.grad <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000) {
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv))
 }
 #' @keywords internal
-fit.mstil.qcmle <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, maxit = 10, lambda.penalty = 0, max.lambda = Inf) {
+fit.mstil.qcmle <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, maxit = 10, lambda.penalty = 0) {
   p <- ncol(lambda)
   k <- ncol(x)
   n <- nrow(x)
@@ -71,7 +71,7 @@ fit.mstil.qcmle <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, ma
     delta <- param[1:k + (p * k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
-    return(sum(dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - sum(exp(lambda.penalty * lambda^2)))
+    return(sum(dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - lambda.penalty * sum(abs(lambda)))
   }
   grad <- function(param) {
     lambda <- matrix(param[1:(p * k)], nrow = k)
@@ -79,17 +79,14 @@ fit.mstil.qcmle <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, ma
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
     grad <- dmstil.grad(x, lambda, delta, Ainv, nu, u)
-    grad$lambda <- grad$lambda - lambda.penalty * 2 * lambda * exp(lambda.penalty * lambda^2)
+    grad$dlambda <- grad$dlambda - lambda.penalty * sign(lambda)
     gr <- c(as.vector(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)])
     return(gr)
   }
   param0 <- c(as.vector(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)])
 
-  if (is.infinite(max.lambda)) optim.method = 'BFGS'
-  else optim.method = 'L-BFGS-B'
-  lower = c(rep(-max.lambda, p * k), rep(-Inf, length(param0) - p * k))
-  upper = -lower
-  res <- stats::optim(param0, lik, grad, method = optim.method, control = c(fnscale = -1, maxit = maxit), lower = lower, upper = upper )
+
+  res <- stats::optim(param0, lik, grad, method = 'BFGS', control = c(fnscale = -1, maxit = maxit))
   param1 <- res$par
   lambda1 <- matrix(param1[1:(p * k)], nrow = k)
   delta1 <- param1[1:k + (p * k)]
@@ -191,7 +188,7 @@ dmstil.grad.weighted <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 1
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv))
 }
 #' @keywords internal
-fit.mstil.weighted.qmle <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 10000, maxit = 10, lambda.penalty = 0, max.lambda = Inf) {
+fit.mstil.weighted.qmle <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 10000, maxit = 10, lambda.penalty = 0) {
   p <- ncol(lambda)
   k <- ncol(x)
   n <- nrow(x)
@@ -204,7 +201,7 @@ fit.mstil.weighted.qmle <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc 
     delta <- param[1:k + (p * k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
-    return(sum(w * dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - sum(exp(lambda.penalty * lambda^2)))
+    return(sum(w * dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - lambda.penalty * sum(abs(lambda)))
   }
   grad <- function(param) {
     lambda <- matrix(param[1:(p * k)], nrow = k)
@@ -212,17 +209,13 @@ fit.mstil.weighted.qmle <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc 
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
     grad <- dmstil.grad.weighted(x, w, lambda, delta, Ainv, nu, u)
-    grad$lambda <- grad$lambda - lambda.penalty * 2 * lambda * exp(lambda.penalty * lambda^2)
+    grad$dlambda <- grad$dlambda - lambda.penalty * sign(lambda)
     gr <- c(as.vector(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)])
     return(gr)
   }
   param0 <- c(as.vector(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)])
   
-  if (is.infinite(max.lambda)) optim.method = 'BFGS'
-  else optim.method = 'L-BFGS-B'
-  lower = c(rep(-max.lambda, p * k), rep(-Inf, length(param0) - p * k))
-  upper = -lower
-  res <- stats::optim(param0, lik, grad, method = optim.method, control = c(fnscale = -1, maxit = maxit), lower = lower, upper = upper)
+  res <- stats::optim(param0, lik, grad, method = 'BFGS', control = c(fnscale = -1, maxit = maxit))
   param1 <- res$par
   lambda1 <- matrix(param1[1:(p * k)], nrow = k)
   delta1 <- param1[1:k + (p * k)]
@@ -240,7 +233,9 @@ mstil.weight <- function(x, omega, lambda, delta, Ainv, nu, u, sample.mc = 10000
 
   if (missing(u)) {
     u <- list()
-    for (i in 1:K) u[[i]] <- mvtnorm::rmvt(sample.mc, delta = rep(0, k), sigma = diag(k), df = nu[[i]])
+    for (i in 1:K){
+      u[[i]] <- mvtnorm::rmvt(sample.mc, delta = rep(0, k), sigma = diag(k), df = nu[[i]])
+    } 
   }
   for (i in 1:K) {
     w[, i] <- omega[i] * dmstil(x, lambda[[i]], delta[[i]], Ainv[[i]], nu[[i]], u[[i]], log.p = FALSE)
@@ -283,7 +278,7 @@ dmstil.r.grad <- function(x, lambda, delta, Ainv, nu) {
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu))
 }
 #' @keywords internal
-fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, max.lambda = Inf) {
+fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, lambda.penalty = 0) {
   k <- ncol(x)
   n <- nrow(x)
   lik <- function(param) {
@@ -293,7 +288,7 @@ fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, ma
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
     nu <- param[length(param)]
     nu <- max(1, nu)
-    res <- sum(w * dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE))
+    res <- sum(w * dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE) - lambda.penalty * sum(abs(lambda)))
     return(res)
   }
   grad <- function(param) {
@@ -303,17 +298,14 @@ fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, ma
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
     nu <- param[length(param)]
     grad <- dmstil.r.grad.weighted(x, w, lambda, delta, Ainv, nu)
+    grad$dlambda <- grad$dlambda - lambda.penalty * sign(lambda)
     gr <- c(diag(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)], grad$dnu)
     return(gr)
   }
   param0 <- c(diag(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)], nu)
   
-  if (is.infinite(max.lambda)) optim.method = 'BFGS'
-  else optim.method = 'L-BFGS-B'
-  lower = c(rep(-max.lambda, k), rep(-Inf, length(param0) - k))
-  upper = -lower
   
-  res <- stats::optim(param0, lik, grad, method = optim.method, control = c(fnscale = -1, maxit = maxit), lower = lower, upper = upper)
+  res <- stats::optim(param0, lik, grad, method = 'BFGS', control = c(fnscale = -1, maxit = maxit))
   param1 <- res$par
   lambda1 <- diag(param1[1:k])
   delta1 <- param1[1:k + (k)]

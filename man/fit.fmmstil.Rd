@@ -25,7 +25,6 @@ fit.fmmstil(
   convergence.n = 5,
   sample.logL = 1e+06,
   lambda.penalty = 0,
-  max.lambda = Inf,
   print.progress = TRUE
 )
 }
@@ -69,8 +68,6 @@ fit.fmmstil(
 \item{sample.logL}{a positive integer, representing the number of monte carlo samples used to estimate the current log-likelihood. By default 1000000.}
 
 \item{lambda.penalty}{a non-negative value, representing the parameter of the penalty term. By default 0.}
-
-\item{max.lambda}{positive value, representign the maximum lambda accepted.}
 
 \item{print.progress}{a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.}
 }

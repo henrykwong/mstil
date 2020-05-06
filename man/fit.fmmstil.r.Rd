@@ -16,8 +16,8 @@ fit.fmmstil.r(
   init.method,
   maxit.bfgs = 1000,
   maxit = 1000,
-  max.lambda = Inf,
   convergence.tol = 0.01,
+  lambda.penalty = 0,
   print.progress = TRUE
 )
 }
@@ -44,9 +44,9 @@ fit.fmmstil.r(
 
 \item{maxit}{a positive integer, representing the maximum number of iterations. By default 1000.}
 
-\item{max.lambda}{positive value, representign the maximum lambda accepted.}
-
 \item{convergence.tol}{the maximum tolerance before the algorithm stops.}
+
+\item{lambda.penalty}{L1 penalty coefficient for lambda}
 
 \item{print.progress}{a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.}
 }
