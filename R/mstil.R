@@ -219,7 +219,6 @@ fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.
 #' @examples
 #' # Not run:
 fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, init.cluster, init.method, step.size = 0.01, dim.rate = 0.01, iter.sgd = 100, tol.sgd = 1e-5, sample.mc = 10000, maxit.bfgs = 10, maxit.qmle = 1, maxit = 1000, convergence.n = 5, sample.logL = 1000000, lambda.penalty = 0, print.progress = TRUE) {
-  print(omega)
   if (is.data.frame(x)) x <- as.matrix(x)
   n <- nrow(x)
   k <- ncol(x)
