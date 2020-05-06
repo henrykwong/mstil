@@ -232,7 +232,6 @@ fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, init.cluster, init
     nu <- list()
     if (missing(init.cluster)) init.cluster <- stats::kmeans(x, K)$cluster
     omega <- table(init.cluster) / n
-    print(omega)
     for (i in 1:K){
       fit.temp <- init.method(x[which(init.cluster == unique(init.cluster)[i]), ])
       lambda[[i]] <- fit.temp$lambda
