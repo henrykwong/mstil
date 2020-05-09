@@ -3,8 +3,18 @@ dmvt2 <- function(x, delta, Ainv, df = 1, log = TRUE) {
   p <- ncol(x)
   R.x_m <- Ainv %*% (t(x) - delta)
   rss <- colSums(R.x_m^2)
-  logretval <- lgamma((p + df) / 2) - (lgamma(df / 2) - sum(log(abs(diag(Ainv)))) +
-    p / 2 * log(pi * df)) - 0.5 * (df + p) * log1p(rss / df)
+  if (is.infinite(df)){
+    logretval <- sum(log(abs(diag(Ainv)))) - 0.5 * p * log(2 * pi) - 0.5 * rss
+  }
+  else if (is.na(((lgamma((p + df) / 2) - (lgamma(df / 2) ))))){
+    logretval <- sum(log(abs(diag(Ainv)))) - 0.5 *  p * log(2 * pi) - 0.5 * rss
+  }
+  else if ((lgamma((p + df) / 2) - (lgamma(df / 2) )) == 0){
+    logretval <- sum(log(abs(diag(Ainv)))) - 0.5 *  p * log(2 * pi) - 0.5 * rss
+  } else{
+    logretval <- lgamma((p + df) / 2) - (lgamma(df / 2) - sum(log(abs(diag(Ainv)))) +
+                                           p / 2 * log(pi * df)) - 0.5 * (df + p) * log1p(rss / df)
+  }
   if (log) {
     logretval
   } else {
@@ -275,7 +285,7 @@ dmstil.r.grad <- function(x, lambda, delta, Ainv, nu) {
   dmu <- dmu_1 + dmu_2
   dAinv <- dAinv_1 + dAinv_2
   dnu <- dnu_1
-  dlnu <- dnu_1 / nu
+  dlnu <- dnu_1 * nu
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu, dlnu = dlnu))
 }
 #' @keywords internal
@@ -288,7 +298,7 @@ fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, la
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
     lnu <- param[length(param)]
-    nu <- exp(lnu)
+    nu <- exp(lnu) 
     res <- sum(w * dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE) - lambda.penalty * sum(abs(lambda)))
     return(res)
   }
@@ -350,7 +360,7 @@ dmstil.r.grad.weighted <- function(x, w, lambda, delta, Ainv, nu) {
   dmu <- dmu_1 + dmu_2
   dAinv <- dAinv_1 + dAinv_2
   dnu <- dnu_1
-  dlnu <- dnu / nu
+  dlnu <- dnu * nu
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu, dlnu = dlnu))
 }
 #' @keywords internal

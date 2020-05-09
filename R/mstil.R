@@ -171,7 +171,7 @@ fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.
     lik_ori <- c(lik_ori, res$value)
     time_rec <- c(time_rec, as.numeric(Sys.time() - start_time, units = "secs"))
     if (print.progress) {
-      cat("\r", "Iterationa : ", (i - 1), "Current Likelihood : ", round(lik_rec[length(lik_rec)]), "Maximum Likelihood : ", round(max(lik_rec)), "\t")
+      cat("\r", "Iteration : ", (i - 1), "Current Likelihood : ", round(lik_rec[length(lik_rec)]), "Maximum Likelihood : ", round(max(lik_rec)), "\t")
     }
     
     if ( i > convergence.n ){
@@ -291,7 +291,7 @@ fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, init.cluster, init
   time_rec <- c(time_rec, difftime(Sys.time(), start_time, units = "secs"))
 
   if (print.progress) {
-    cat("\r", "Iterationa : ", length(lik_rec), "Current Likelihood : ", round(lik_rec[length(lik_rec)]), "Maximum Likelihood : ", round(max(lik_rec)), "\t")
+    cat("\r", "Iteration : ", length(lik_rec), "Current Likelihood : ", round(lik_rec[length(lik_rec)]), "Maximum Likelihood : ", round(max(lik_rec)), "\t")
     cat("\n", "maximum number of iteration reached!")
   }
   return(list(logL = lik_rec, par = res_rec, time = time_rec))
@@ -392,7 +392,7 @@ fit.fmmstil.r <- function(x, K, omega, lambda, delta, Ainv, nu, init.cluster, in
   time_rec <- c(time_rec, difftime(Sys.time(), start_time, units = "secs"))
 
   if (print.progress) {
-    cat("\r", "Iterationa : ", length(lik_rec), "Current Likelihood : ", round(lik_rec[length(lik_rec)]), "Maximum Likelihood : ", round(max(lik_rec)), "\t")
+    cat("\r", "Iteration : ", length(lik_rec), "Current Likelihood : ", round(lik_rec[length(lik_rec)]), "Maximum Likelihood : ", round(max(lik_rec)), "\t")
     cat("\n", "maximum number of iteration reached!")
   }
   return(list(logL = lik_rec, par = res_rec, time = time_rec))
@@ -500,8 +500,9 @@ fit.mstil.r <- function(x, lambda, delta, Ainv, nu, maxit = 1000, lambda.penalty
     lnu <- param[length(param)]
     nu <- exp(lnu)
     grad <- dmstil.r.grad(x, lambda, delta, Ainv, nu)
+    grad$dlambda <- grad$dlambda - lambda.penalty * sign(lambda)
     gr <- c(diag(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)], grad$dlnu)
-    gr$dlambda <- gr$dlambda - lambda.penalty * sign(lambda)
+
     return(gr)
   }
   param0 <- c(diag(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)], log(nu))
