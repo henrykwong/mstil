@@ -101,10 +101,10 @@ mstil.logL <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, q = 0.9
 #' @param delta a numeric vector of length k, representing the location parameter.
 #' @param Ainv an lower triangular numeric matrix of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.
 #' @param nu a positive value representing the degree of freedom/
-#' @param step.size a positive value representing the step size used in fitting nu. By default 0.1.
-#' @param dim.rate a non-negative value representing the step size diminishing rate used in fitting nu. By default 0.01.
-#' @param iter.sgd a positive integer representing the number of iterations used in fitting nu. By default 100.
-#' @param tol.sgd a positive value, representing the finite difference tolerance for gradient estimations.
+#' @param sgd.step.size a positive value representing the step size used in fitting nu. By default 0.1.
+#' @param sgd.dim.rate a non-negative value representing the step size diminishing rate used in fitting nu. By default 0.01.
+#' @param sgd.iter a positive integer representing the number of iterations used in fitting nu. By default 100.
+#' @param sgd.tol a positive value, representing the finite difference tolerance for gradient estimations.
 #' @param sample.mc a positive integer, representing the number of monte carlo samples used in the quasi log-likelihood function. By default 10000.
 #' @param maxit.bfgs a positive integer, representing the maximum number of iterations used in the QMLE step. By default 10.
 #' @param maxit a positive integer, representing the maximum number of iterations. By default 1000.
@@ -124,7 +124,7 @@ mstil.logL <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, q = 0.9
 #' @examples
 #' # Not run:
 #' # fit.mstil(log(RiverFlow))
-fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.01, iter.sgd = 100, tol.sgd = 1e-5, sample.mc = 10000, maxit.bfgs = 10, maxit = 1000, convergence.n = 5, sample.logL = 1000000, q = 0.95, lambda.penalty = 0, print.progress = TRUE) {
+fit.mstil <- function(x, lambda, delta, Ainv, nu, sgd.step.size = 0.1, sgd.dim.rate = 0.01, sgd.iter = 100, sgd.tol = 1e-5, sample.mc = 10000, maxit.bfgs = 10, maxit = 1000, convergence.n = 5, sample.logL = 1000000, q = 0.95, lambda.penalty = 0, print.progress = TRUE) {
   if (is.data.frame(x)) x <- as.matrix(x)
   k <- dim(x)[2]
   if (missing(lambda)) lambda <- 0 * diag(k)
@@ -162,7 +162,7 @@ fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.
 
   for (i in 2:(maxit + 1)) {
     res <- fit.mstil.qcmle(x, res$lambda, res$delta, res$Ainv, res$nu, maxit = maxit.bfgs, sample.mc = sample.mc, lambda.penalty = lambda.penalty)
-    res$nu <- fit.mstil.sgd(x, res$lambda, res$delta, res$Ainv, nu, tol = tol.sgd, step.size = step.size / length(x), dim.rate = dim.rate, iter.sgd = iter.sgd, sample.mc = sample.mc)
+    res$nu <- fit.mstil.sgd(x, res$lambda, res$delta, res$Ainv, nu, tol = sgd.tol, step.size = sgd.step.size / length(x), dim.rate = sgd.dim.rate, iter = sgd.iter, sample.mc = sample.mc)
     lik <- mstil.logL(x, res$lambda, res$delta, res$Ainv, res$nu, sample.mc = sample.logL, q = q)
     res_rec[[i]] <- res
     lik_rec <- c(lik_rec, lik$logL)
@@ -199,10 +199,10 @@ fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.
 #' @param nu list of positive values representing the degree of freedom.
 #' @param init.cluster initial cluster to help set initial parameters
 #' @param init.method method to find initial parameters. 
-#' @param step.size a positive value representing the step size used in fitting nu. By default 0.1.
-#' @param dim.rate a non-negative value representing the step size diminishing rate used in fitting nu. By default 0.01.
-#' @param iter.sgd a positive integer representing the number of iterations used in fitting nu. By default 100.
-#' @param tol.sgd a positive value, representing the finite difference tolerance for gradient estimations.
+#' @param sgd.step.size a positive value representing the step size used in fitting nu. By default 0.1.
+#' @param sgd.dim.rate a non-negative value representing the step size diminishing rate used in fitting nu. By default 0.01.
+#' @param sgd.iter a positive integer representing the number of iterations used in fitting nu. By default 100.
+#' @param sgd.tol a positive value, representing the finite difference tolerance for gradient estimations.
 #' @param sample.mc a positive integer, representing the number of monte carlo samples used in the quasi log-likelihood function. By default 10000.
 #' @param maxit.bfgs a positive integer, representing the maximum number of iterations used in the QMLE step. By default 10.
 #' @param maxit.qmle a positive integer, representing the number of iteration within each M-step.
@@ -218,7 +218,7 @@ fit.mstil <- function(x, lambda, delta, Ainv, nu, step.size = 0.1, dim.rate = 0.
 #' @export
 #' @examples
 #' # Not run:
-fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, init.cluster, init.method, step.size = 0.01, dim.rate = 0.01, iter.sgd = 100, tol.sgd = 1e-5, sample.mc = 10000, maxit.bfgs = 10, maxit.qmle = 1, maxit = 1000, convergence.n = 5, sample.logL = 1000000, lambda.penalty = 0, print.progress = TRUE) {
+fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, init.cluster, init.method, sgd.step.size = 0.01, sgd.dim.rate = 0.01, sgd.iter = 100, sgd.tol = 1e-5, sample.mc = 10000, maxit.bfgs = 10, maxit.qmle = 1, maxit = 1000, convergence.n = 5, sample.logL = 1000000, lambda.penalty = 0, print.progress = TRUE) {
   if (is.data.frame(x)) x <- as.matrix(x)
   n <- nrow(x)
   k <- ncol(x)
@@ -276,7 +276,7 @@ fit.fmmstil <- function(x, K, omega, lambda, delta, Ainv, nu, init.cluster, init
         res$lambda[[j]] <- res1$lambda
         res$delta[[j]] <- res1$delta
         res$Ainv[[j]] <- res1$Ainv
-        res$nu[[j]] <- fit.mstil.weighted.sgd(x, w[, j], res$lambda[[j]], res$delta[[j]], res$Ainv[[j]], res$nu[[j]], step.size = step.size / length(x), dim.rate = dim.rate, iter.sgd = iter.sgd, sample.mc = sample.mc)
+        res$nu[[j]] <- fit.mstil.weighted.sgd(x, w[, j], res$lambda[[j]], res$delta[[j]], res$Ainv[[j]], res$nu[[j]], step.size = sgd.step.size / length(x), dim.rate = sgd.dim.rate, iter = sgd.iter, tol = sgd.tol, sample.mc = sample.mc)
       }
     }
   }
@@ -517,4 +517,225 @@ fit.mstil.r <- function(x, lambda, delta, Ainv, nu, maxit = 1000, lambda.penalty
   lnu1 <- param1[length(param1)]
   nu1 <- exp(lnu1)
   return(list(lambda = lambda1, delta = delta1, Ainv = Ainv1, nu = nu1, logL = res$value))
+}
+
+#' Clustering using mstil given a fixed number of clusters.
+#' @param x a n x k matrix, representing n k-variate samples.
+#' @param K positive integer, number of cluster.
+#' @param nstart a positive integer, number of starting points to be evaluated. 
+#' @param init.cluster.method a function of x, K seperate x into initial clusters. 
+#' @param init.method a functino of x, return initial parameters. 
+#' @param print.progress show progress on console. 
+#' @param ... additional parameters 
+#' @return a list with components:
+#' \item{Restricted}{a list containing details of the best fitted mstil.r.}
+#' \item{Unrestricted}{a list containing details of the best fitted mstil.}
+#' \item{record}{a list containing all fitted mstil.r.}
+#' @export
+#' @examples
+#' # Not run:
+cluster.fmmstil.K = function(x, K, nstart, init.cluster.method, init.method, print.progress = TRUE, ...){
+  
+  if (missing(init.cluster.method)) init.cluster.method = default.init.cluster
+  if (missing(init.method)) init.method = default.init.method
+  
+  mstil.r.record = list()
+  
+  k = ncol(x)
+  ICL.max = -Inf
+  n = nstart
+  for (i in 1:n){
+    
+    if(print.progress) cat('\n','MSTIL.R','\t', 'K : ', K, '\t', 'Trial : ', i, ' of ', n)
+    
+    init.cluster = init.cluster.method(x, K)
+    
+    res1 = tryCatch(fit.fmmstil.r(x, K, init.cluster = init.cluster, init.method = init.method, print.progress = FALSE, ...),
+                    error = function(e) NA,
+                    warning = function(w) NA)
+    if (is.list(res1)){
+      par = res1$par[[which.max(res1$logL)]]
+      classify1 = mstil.r.weight(x, par$omega, par$lambda, par$delta, par$Ainv, par$nu)
+      guess1 = apply(classify1, 1, which.max)
+      ICL = ICL.fun(classify1, K, k + k + 1 + k * (k + 1) / 2, nrow(x))
+      res1$ICL <- ICL
+      res1$clust = guess1
+      if (ICL > ICL.max){
+        res1.true <- res1
+        ICL.max <- ICL
+        guess1.true <- guess1
+      }
+      if (print.progress) cat('\t', 'Max ICL : ', (round(ICL.max,2)), '\t', 'Current ICL : ', (round(ICL,2)))
+    }
+    mstil.r.record[[i]] <- res1
+  }
+  
+  
+  if (print.progress) cat('\n','MSTIL  ','\t', 'K : ', K, '\t', 'Trial : ', 1, ' of ', 1)
+  
+  par = res1.true$par[[which.max(res1.true$logL)]]
+  res2.true = tryCatch(fit.fmmstil(x, K, omega = par$omega, lambda = par$lambda, delta = par$delta, Ainv = par$Ainv, nu = par$nu, print.progress = FALSE, ...),
+                       error = function(e) res1.true,
+                       warning = function(w) res1.true)
+
+  par = res2.true$par[[which.max(res2.true$logL)]]
+  classify2 = mstil.weight(x, par$omega, par$lambda, par$delta, par$Ainv, par$nu)
+  guess2 = apply(classify2, 1, which.max)
+  ICL = ICL.fun(classify2, K, k + 1 + k * (k + 1), nrow(x))
+  res2.true$ICL <- ICL
+  res2.true$clust <- guess2
+  if (print.progress) cat('\t', 'Max ICL : ', (round(ICL.max,2)), '\t', 'Current ICL : ', (round(ICL,2)))
+
+  return(list(Restricted = res1.true, Unrestricted = res2.true, record = mstil.r.record))
+}
+
+
+#' Clustering using mstil given a fixed number of clusters.
+#' @param x a n x k matrix, representing n k-variate samples.
+#' @param nstart.fun a function that returns nstart given K. 
+#' @param init.cluster.method a function of x, K seperate x into initial clusters. 
+#' @param init.method a functino of x, return initial parameters. 
+#' @param print.progress show progress on console. 
+#' @param ... additional parameters 
+#' @return a list with components:
+#' \item{Res}{a list containing details of the best fitted distribution}
+#' \item{Unrestricted}{a list containing details of the best fitted mstil.}
+#' \item{record}{a list containing all fitted mstil.r for each K.}
+#' @export
+#' @examples
+#' # Not run:
+cluster.fmmstil = function(x, nstart.fun, init.cluster.method, init.method, print.progress = TRUE, ...){
+  
+  if (missing(nstart.fun)) nstart.fun = function(K) 2^K
+  if (missing(init.cluster.method)) init.cluster.method = default.init.cluster
+  if (missing(init.method)) init.method = default.init.method
+  
+  all.record <- list()
+  t.start = Sys.time()
+  K = 1
+  ICL.max = -Inf
+  while (TRUE){
+    res = cluster.fmmstil.K(x, K, nstart.fun(K), init.cluster.method, init.method, print.progress = print.progress, ...)
+    if(print.progress) cat('\n')
+    all.record[[K]] <- res$record
+    if (ICL.max >= max(res$Restricted$ICL,res$Unrestricted$ICL)){
+      res.true$time = difftime(Sys.time(),t.start, units = 'secs')
+      return(list(res = res.true, record = all.record))
+    } else if (res$Restricted$ICL > res$Unrestricted$ICL){
+      res.true = res$Restricted
+      ICL.max = res$Restricted$ICL
+      K = K + 1
+    } else{
+      res.true <- res$Unrestricted
+      ICL.max <- res$Unrestricted$ICL
+      K = K + 1
+    }
+  }
+}
+
+
+#' Clustering using mstil given a fixed number of clusters in parallel.
+#' @param x a n x k matrix, representing n k-variate samples.
+#' @param K positive integer, number of cluster.
+#' @param ncore a positive integer, number of core to be used
+#' @param nstart a positive integer, number of starting points to be evaluated. 
+#' @param init.cluster.method a function of x, K seperate x into initial clusters. 
+#' @param init.method a functino of x, return initial parameters. 
+#' @param print.progress show progress on console. 
+#' @param ... additional parameters 
+#' @return a list with components:
+#' \item{Restricted}{a list containing details of the best fitted mstil.r.}
+#' \item{Unrestricted}{a list containing details of the best fitted mstil.}
+#' \item{record}{a list containing all fitted mstil.r.}
+#' @export
+#' @examples
+#' # Not run:
+cluster.fmmstil.K.parallel = function(x, K, ncore, nstart, init.cluster.method, init.method, print.progress = TRUE, ...){
+  if (ncore > parallel::detectCores()){
+    warning('Not enough available core')
+    ncore <- parallel::detectCores()
+  }
+  
+  if (missing(init.cluster.method)) init.cluster.method = default.init.cluster
+  if (missing(init.method)) init.method = default.init.method
+  
+  k = ncol(x)
+  if(print.progress) cat('\n','MSTIL.R','\t', 'K : ', K, '\t', 'Number of Trials : ', ncore)
+  
+  seed = sample(1000000000, nstart)
+  res = parallel::mclapply(seed, cluster.mstil.r.1, x = x, K = K, init.cluster.method = init.cluster.method, init.method = init.method, ...)
+  
+  ICL.all = c()
+  for (i in 1:nstart) ICL.all = c(ICL.all, res[[i]]$ICL)
+  res1.true <- res[[which.max(ICL.all)]]
+  
+  par = res1.true$par[[which.max(res1.true$logL)]]
+  
+  if (print.progress) cat('\t', 'Max ICL : ', (round(max(ICL.all),2)) )
+  
+  
+  if (print.progress) cat('\n','MSTIL  ','\t', 'K : ', K, '\t')
+  res2.true = tryCatch(fit.fmmstil(x, K, omega = par$omega, lambda = par$lambda, delta = par$delta, Ainv = par$Ainv, nu = par$nu, print.progress = FALSE, ...),
+                       error = function(e) res1.true,
+                       warning = function(w) res1.true)
+  
+  par = res2.true$par[[which.max(res2.true$logL)]]
+  classify2 = mstil.weight(x, par$omega, par$lambda, par$delta, par$Ainv, par$nu)
+  guess2 = apply(classify2, 1, which.max)
+  ICL = ICL.fun(classify2, K, k + 1 + k * (k + 1), nrow(x))
+  res2.true$ICL <- ICL
+  res2.true$clust <- guess2
+  if (print.progress) cat('\t', 'Max ICL : ', (round(max(ICL.all, ICL),2)) )
+  return(list(Restricted = res1.true, Unrestricted = res2.true, record = res))
+  
+}
+
+
+#' Clustering using mstil given a fixed number of clusters.
+#' @param x a n x k matrix, representing n k-variate samples.
+#' @param ncore a positive integer, number of core to be used
+#' @param nstart.fun a function that returns nstart given K. 
+#' @param init.cluster.method a function of x, K seperate x into initial clusters. 
+#' @param init.method a functino of x, return initial parameters. 
+#' @param print.progress show progress on console. 
+#' @param ... additional parameters 
+#' @return a list with components:
+#' \item{Res}{a list containing details of the best fitted distribution}
+#' \item{Unrestricted}{a list containing details of the best fitted mstil.}
+#' \item{record}{a list containing all fitted mstil.r for each K.}
+#' @export
+#' @examples
+#' # Not run:
+cluster.fmmstil.parallel = function(x, ncore, nstart.fun, init.cluster.method, init.method, print.progress = TRUE, ...){
+  if (missing(nstart.fun)) nstart.fun = function(K) 2^K 
+  if (missing(init.cluster.method)) init.cluster.method = default.init.cluster
+  if (missing(init.method)) init.method = default.init.method
+  
+  if (ncore > parallel::detectCores()){
+    warning('Not enough available core')
+    ncore <- parallel::detectCores()
+  }
+  
+  
+  all.record <- list()
+  t.start = Sys.time()
+  K = 1
+  ICL.max = -Inf
+  while (TRUE){
+    res = cluster.fmmstil.K.parallel(x, K, ncore, nstart.fun(K), init.cluster.method, init.method, print.progress = print.progress, ...)
+    if(print.progress) cat('\n')
+    all.record[[K]] <- res$record
+    if (ICL.max >= max(res$Restricted$ICL,res$Unrestricted$ICL)){
+      res.true$time = difftime(Sys.time(),t.start, units = 'secs')
+      return(list(res = res.true, record = all.record))
+    } else if (res$Restricted$ICL > res$Unrestricted$ICL){
+      res.true = res$Restricted
+      ICL.max = res$Restricted$ICL
+      K = K + 1
+    } else{
+      res.true <- res$Unrestricted
+      ICL.max <- res$Unrestricted$ICL
+      K = K + 1
+    }
+  }
 }

@@ -14,10 +14,10 @@ fit.fmmstil(
   nu,
   init.cluster,
   init.method,
-  step.size = 0.01,
-  dim.rate = 0.01,
-  iter.sgd = 100,
-  tol.sgd = 1e-05,
+  sgd.step.size = 0.01,
+  sgd.dim.rate = 0.01,
+  sgd.iter = 100,
+  sgd.tol = 1e-05,
   sample.mc = 10000,
   maxit.bfgs = 10,
   maxit.qmle = 1,
@@ -47,13 +47,13 @@ fit.fmmstil(
 
 \item{init.method}{method to find initial parameters.}
 
-\item{step.size}{a positive value representing the step size used in fitting nu. By default 0.1.}
+\item{sgd.step.size}{a positive value representing the step size used in fitting nu. By default 0.1.}
 
-\item{dim.rate}{a non-negative value representing the step size diminishing rate used in fitting nu. By default 0.01.}
+\item{sgd.dim.rate}{a non-negative value representing the step size diminishing rate used in fitting nu. By default 0.01.}
 
-\item{iter.sgd}{a positive integer representing the number of iterations used in fitting nu. By default 100.}
+\item{sgd.iter}{a positive integer representing the number of iterations used in fitting nu. By default 100.}
 
-\item{tol.sgd}{a positive value, representing the finite difference tolerance for gradient estimations.}
+\item{sgd.tol}{a positive value, representing the finite difference tolerance for gradient estimations.}
 
 \item{sample.mc}{a positive integer, representing the number of monte carlo samples used in the quasi log-likelihood function. By default 10000.}
 

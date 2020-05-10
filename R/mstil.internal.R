@@ -3,7 +3,7 @@ dmvt2 <- function(x, delta, Ainv, df = 1, log = TRUE) {
   p <- ncol(x)
   R.x_m <- Ainv %*% (t(x) - delta)
   rss <- colSums(R.x_m^2)
-  if (is.infinite(df)){
+  if (df > 1e6){
     logretval <- sum(log(abs(diag(Ainv)))) - 0.5 * p * log(2 * pi) - 0.5 * rss
   }
   else if (is.na(((lgamma((p + df) / 2) - (lgamma(df / 2) ))))){
@@ -21,6 +21,7 @@ dmvt2 <- function(x, delta, Ainv, df = 1, log = TRUE) {
     exp(logretval)
   }
 }
+
 #' @keywords internal
 dmstil.grad <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000) {
   n <- nrow(x)
@@ -67,6 +68,7 @@ dmstil.grad <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000) {
   dAinv <- dAinv_1 + dAinv_2
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv))
 }
+
 #' @keywords internal
 fit.mstil.qcmle <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, maxit = 10, lambda.penalty = 0) {
   p <- ncol(lambda)
@@ -105,6 +107,7 @@ fit.mstil.qcmle <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, ma
 
   return(list(lambda = lambda1, delta = delta1, Ainv = Ainv1, nu = nu, value = res$value))
 }
+
 #' @keywords internal
 dmstil.grad.nu <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, tol = 1e-5) {
   n <- nrow(x)
@@ -119,9 +122,10 @@ dmstil.grad.nu <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, tol
   dnu_x <- (dmvt2(x, delta, Ainv, df = exp(log(nu) + tol)) - dmvt2(x, delta, Ainv, df = nu)) / tol
   return(sum(dnu_x) - n * sum(dnu_u * rsG) / sum(rsG))
 }
+
 #' @keywords internal
-fit.mstil.sgd <- function(x, lambda, delta, Ainv, nu, tol = 1e-5, step.size = 0.1, dim.rate = 0.1, iter.sgd = 100, sample.mc = 10000) {
-  for (i in 1:iter.sgd) {
+fit.mstil.sgd <- function(x, lambda, delta, Ainv, nu, tol = 1e-5, step.size = 0.1, dim.rate = 0.1, iter = 100, sample.mc = 10000) {
+  for (i in 1:iter) {
     grad <- dmstil.grad.nu(x, lambda, delta, Ainv, nu, sample.mc = sample.mc)
     if (is.na(grad)) grad <- 0
     nu <- exp(log(nu) + step.size * exp(-i * dim.rate) * grad)
@@ -129,6 +133,7 @@ fit.mstil.sgd <- function(x, lambda, delta, Ainv, nu, tol = 1e-5, step.size = 0.
   }
   return(nu)
 }
+
 #' @keywords internal
 dmstil.grad.weighted.nu <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 10000, tol = 1e-5) {
   k <- ncol(x)
@@ -141,9 +146,10 @@ dmstil.grad.weighted.nu <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc 
   dnu_x <- (dmvt2(x, delta, Ainv, df = exp(log(nu) + tol)) - dmvt2(x, delta, Ainv, df = nu)) / tol
   return(sum(w * dnu_x) - sum(w) * sum(dnu_u * rsG) / sum(rsG))
 }
+
 #' @keywords internal
-fit.mstil.weighted.sgd <- function(x, w, lambda, delta, Ainv, nu, tol = 1e-5, step.size = 0.1, dim.rate = 0.1, iter.sgd = 100, sample.mc = 10000) {
-  for (i in 1:iter.sgd) {
+fit.mstil.weighted.sgd <- function(x, w, lambda, delta, Ainv, nu, tol = 1e-5, step.size = 0.1, dim.rate = 0.1, iter = 100, sample.mc = 10000) {
+  for (i in 1:iter) {
     grad <- dmstil.grad.weighted.nu(x, w, lambda, delta, Ainv, nu, sample.mc = sample.mc)
     if (is.na(grad)) grad <- 0
     nu <- exp(log(nu) + step.size * exp(-i * dim.rate) * grad)
@@ -151,6 +157,7 @@ fit.mstil.weighted.sgd <- function(x, w, lambda, delta, Ainv, nu, tol = 1e-5, st
   }
   return(nu)
 }
+
 #' @keywords internal
 dmstil.grad.weighted <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 10000) {
   n <- nrow(x)
@@ -197,6 +204,7 @@ dmstil.grad.weighted <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 1
   dAinv <- dAinv_1 + dAinv_2
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv))
 }
+
 #' @keywords internal
 fit.mstil.weighted.qmle <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 10000, maxit = 10, lambda.penalty = 0) {
   p <- ncol(lambda)
@@ -234,6 +242,7 @@ fit.mstil.weighted.qmle <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc 
 
   return(list(lambda = lambda1, delta = delta1, Ainv = Ainv1, nu = nu, value = res$value))
 }
+
 #' @keywords internal
 mstil.weight <- function(x, omega, lambda, delta, Ainv, nu, u, sample.mc = 1000000) {
   K <- length(omega)
@@ -252,6 +261,7 @@ mstil.weight <- function(x, omega, lambda, delta, Ainv, nu, u, sample.mc = 10000
   }
   return(w)
 }
+
 #' @keywords internal
 dmstil.r.grad <- function(x, lambda, delta, Ainv, nu) {
   n <- nrow(x)
@@ -288,6 +298,7 @@ dmstil.r.grad <- function(x, lambda, delta, Ainv, nu) {
   dlnu <- dnu_1 * nu
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu, dlnu = dlnu))
 }
+
 #' @keywords internal
 fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, lambda.penalty = 0) {
   k <- ncol(x)
@@ -327,6 +338,7 @@ fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, la
   nu1 <- exp(lnu1)
   return(list(lambda = lambda1, delta = delta1, Ainv = Ainv1, nu = nu1, value = res$value))
 }
+
 #' @keywords internal
 dmstil.r.grad.weighted <- function(x, w, lambda, delta, Ainv, nu) {
   n <- nrow(x)
@@ -363,6 +375,7 @@ dmstil.r.grad.weighted <- function(x, w, lambda, delta, Ainv, nu) {
   dlnu <- dnu * nu
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu, dlnu = dlnu))
 }
+
 #' @keywords internal
 mstil.r.weight <- function(x, omega, lambda, delta, Ainv, nu) {
   K <- length(omega)
@@ -374,3 +387,62 @@ mstil.r.weight <- function(x, omega, lambda, delta, Ainv, nu) {
   }
   return(w)
 }
+
+#' @keywords internal
+ICL.fun = function(weight, K, m, n){
+  logL = sum(log(rowSums(weight)))
+  weight = weight / rowSums(weight)
+  guess = apply(weight, 1, which.max)
+  n.K = table(guess)
+  m.K = m * K + K - 1
+  ICL = logL + 
+    m.K / 2 * log(n) +
+    lgamma(K / 2) + sum(log(apply(weight, 1, max)))
+  sum(lgamma(n.K + 0.5)) -
+    K * lgamma(0.5) -
+    lgamma(n + K / 2)
+  if (any(n.K < 10) || length(n.K) < K) ICL <- -Inf  
+  return(ICL)
+}
+
+#' @keywords internal
+default.init.method = function(x){
+  res = list()
+  res$lambda = diag(stats::runif(3,-0.5,0.5))
+  res$delta = x[sample(nrow(x),1),]
+  res$Ainv = t(solve(chol(stats::cov(x))))
+  res$nu = 10
+  return(res)
+}
+
+#' @keywords internal
+default.init.cluster = function(x, K){
+  init.cluster.prob = stats::runif(K) + 1
+  init.cluster.prob = init.cluster.prob/sum(init.cluster.prob)
+  init.cluster = sample(K, nrow(x), replace = TRUE, prob = init.cluster.prob)
+  return(init.cluster)
+}
+
+
+#' @keywords internal
+cluster.mstil.r.1 = function(seed, x, K, init.cluster.method, init.method, ...){
+  k = ncol(x)
+  set.seed(seed)
+  if (missing(init.cluster.method)) init.cluster.method = default.init.cluster
+  if (missing(init.method)) init.method = default.init.method
+  init.cluster = init.cluster.method(x, K)
+  
+  res1 = tryCatch(fit.fmmstil.r(x, K, init.cluster = init.cluster, init.method = init.method, print.progress = FALSE, ...),
+                error = function(e) NA,
+                warning = function(w) NA)
+  if (is.list(res1)){
+    par = res1$par[[which.max(res1$logL)]]
+    classify1 = mstil.r.weight(x, par$omega, par$lambda, par$delta, par$Ainv, par$nu)
+    guess1 = apply(classify1, 1, which.max)
+    ICL = ICL.fun(classify1, K, k + k + 1 + k * (k + 1) / 2, nrow(x))
+    res1$ICL <- ICL
+    res1$clust = guess1
+  }
+  return(res1)
+}
+

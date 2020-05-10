@@ -5,11 +5,11 @@ Version: 0.1.0
 Author: Hok Shing Kwong
 Maintainer: Me <hokshing.kwong@manchester.ac.uk>
 Description: Penalised Quasi Maximum Likelihood Estimations for Multivariate Skew t distribution with Independent Logistic skewing function.
-License: GPL-3 + file LICENSE
+License: LGPL-3 + file LICENSE
 Encoding: UTF-8
 LazyData: TRUE
 Imports:
-	stats, utils, mvtnorm
+	stats, utils, mvtnorm, parallel
 RoxygenNote: 7.1.0
 Depends: 
     R (>= 2.10)
