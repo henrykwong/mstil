@@ -7,12 +7,12 @@
 cluster.fmmstil.K.parallel(
   x,
   K,
-  ncore,
-  nstart,
+  ncore = 1,
+  numTrial = 1,
   init.cluster.method,
-  init.method,
-  print.progress = TRUE,
-  ...
+  init.param.method,
+  show.progress = TRUE,
+  control = list()
 )
 }
 \arguments{
@@ -20,27 +20,29 @@ cluster.fmmstil.K.parallel(
 
 \item{K}{positive integer, number of cluster.}
 
-\item{ncore}{a positive integer, number of core to be used}
+\item{ncore}{number of cpu core to be used in parallel. By default 1.}
 
-\item{nstart}{a positive integer, number of starting points to be evaluated.}
+\item{numTrial}{a positive integer, number of trials to be evaluated.}
 
-\item{init.cluster.method}{a function of x, K seperate x into initial clusters.}
+\item{init.cluster.method}{a function of x, K that seperates x into K initial clusters.}
 
-\item{init.method}{a functino of x, return initial parameters.}
+\item{init.param.method}{a functino of x, return initial parameters.}
 
-\item{print.progress}{show progress on console.}
+\item{show.progress}{show progress on console.}
 
-\item{...}{additional parameters}
+\item{control}{list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil. In this case, the default lambdaPenalty is 0.01 and the default cvgConR is 0.1 instead.}
 }
 \value{
 a list with components:
-\item{Restricted}{a list containing details of the best fitted mstil.r.}
-\item{Unrestricted}{a list containing details of the best fitted mstil.}
-\item{record}{a list containing all fitted mstil.r.}
+\item{restricted}{a list containing details of the best fitted fmmstil.r.}
+\item{unrestricted}{a list containing details of the best fitted fmmstil.}
+\item{recordR}{a list of list containing details all fitted fmmstil.r.}
 }
 \description{
 Clustering using mstil given a fixed number of clusters in parallel.
 }
 \examples{
 # Not run:
+# data(RiverFlow)
+# cluster.fmmstil.L.parallel(as.matrix(log(RiverFlow)),2,2)
 }

@@ -2,39 +2,40 @@
 % Please edit documentation in R/mstil.R
 \name{cluster.fmmstil}
 \alias{cluster.fmmstil}
-\title{Clustering using mstil given a fixed number of clusters.}
+\title{Automatic model based clustering via fmmstil.}
 \usage{
 cluster.fmmstil(
   x,
-  nstart.fun,
+  numTrial.fun,
   init.cluster.method,
-  init.method,
-  print.progress = TRUE,
-  ...
+  init.param.method,
+  show.progress = TRUE,
+  control = list()
 )
 }
 \arguments{
 \item{x}{a n x k matrix, representing n k-variate samples.}
 
-\item{nstart.fun}{a function that returns nstart given K.}
+\item{numTrial.fun}{a function of K that returns the number of trials to be evaluated.}
 
-\item{init.cluster.method}{a function of x, K seperate x into initial clusters.}
+\item{init.cluster.method}{a function of x, K that seperates x into K initial clusters.}
 
-\item{init.method}{a functino of x, return initial parameters.}
+\item{init.param.method}{a functino of x, return initial parameters.}
 
-\item{print.progress}{show progress on console.}
+\item{show.progress}{show progress on console.}
 
-\item{...}{additional parameters}
+\item{control}{list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil. In this case, the default lambdaPenalty is 0.01 and the default cvgConR is 0.1 instead.}
 }
 \value{
 a list with components:
-\item{Res}{a list containing details of the best fitted distribution}
-\item{Unrestricted}{a list containing details of the best fitted mstil.}
-\item{record}{a list containing all fitted mstil.r for each K.}
+\item{res}{a list containing details of the best fitted distribution.}
+\item{record}{a list of list containing details all fitted fmmstil.r.}
 }
 \description{
-Clustering using mstil given a fixed number of clusters.
+Automatic model based clustering via fmmstil.
 }
 \examples{
 # Not run:
+# data(RiverFlow)
+# cluster.fmmstil(as.matrix(log(RiverFlow)))
 }

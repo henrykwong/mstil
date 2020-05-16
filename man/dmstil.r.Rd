@@ -7,27 +7,31 @@
 dmstil.r(x, lambda, delta, Ainv, nu, log.p = FALSE)
 }
 \arguments{
-\item{x}{a n x k matrix, representing n k-variate samples.}
+\item{x}{matrix of quantiles of size n x k. Each row is taken as a quantile.}
 
-\item{lambda}{a numeric diagonal skewing matrix of size k x k.}
+\item{lambda}{skewing matrix with k rows.}
 
-\item{delta}{a numeric vector of length k, representing the location parameter.}
+\item{delta}{location vector of size k.}
 
-\item{Ainv}{an lower triangular numeric matrix of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.}
+\item{Ainv}{lower triangular matrix, where t(Ainv) * Ainv is the precision matrix.}
 
-\item{nu}{a positive value representing the degree of freedom/}
+\item{nu}{degree of freedom (>0).}
 
 \item{log.p}{a logical value. If TRUE, return the probability density function in logarithmic scale. By default FALSE.}
 }
 \value{
-a list with components:
-\item{logL}{a vector of the estimated log-likelihood function after each itereation.}
-\item{par}{a list of list of fitted parameters after each iteration. Within each list, "lambda" is the fitted skewing matrix, "delta" is the location parameter, "Ainv" is the reparameterised scale parameter, "nu" is the degree of freedom.}
-\item{time}{a non-negative numeric vector, records the time elapsed after each iteration.}
+return a numeric vector of length n.
 }
 \description{
 This function returns to likelihood function of restricted mstil.
 }
 \examples{
 # Not run:
+# data(RiverFlow)
+# k <- ncol(RiverFlow)
+# lambda <- diag(k)
+# delta <- rep(0,k)
+# Ainv <- diag(k)
+# nu <- 2
+# dmstil.r(as.matrix(log(RiverFlow)), lambda, delta, Ainv, nu)
 }

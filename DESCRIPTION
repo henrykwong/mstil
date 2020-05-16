@@ -1,7 +1,7 @@
 Package: mstil
 Type: Package
 Title: 'Multivariate Skew t Distribution with Independent Logistic Skewing Function (MSTIL)'
-Version: 0.1.0
+Version: 0.9.1
 Author: Hok Shing Kwong
 Maintainer: Me <hokshing.kwong@manchester.ac.uk>
 Description: Penalised Quasi Maximum Likelihood Estimations for Multivariate Skew t distribution with Independent Logistic skewing function.
@@ -13,3 +13,4 @@ Imports:
 RoxygenNote: 7.1.0
 Depends: 
     R (>= 2.10)
+Roxygen: list(markdown = TRUE)

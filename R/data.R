@@ -12,6 +12,6 @@
 #'   \item{\code{Ower}}{double OWER}
 #'   \item{\code{Great.Corby}}{double GREAT CORBY}
 #'   \item{\code{Elm.Park..Bretons.Farm.}}{double ELM PARK BRETONS FARM}
-#'}
+#' }
 #' @source \url{http://environment.data.gov.uk/hydrology}
 "RiverFlow"

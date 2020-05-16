@@ -1,35 +1,30 @@
 #' @keywords internal
-dmvt2 <- function(x, delta, Ainv, df = 1, log = TRUE) {
-  p <- ncol(x)
-  R.x_m <- Ainv %*% (t(x) - delta)
-  rss <- colSums(R.x_m^2)
-  if (df > 1e6){
-    logretval <- sum(log(abs(diag(Ainv)))) - 0.5 * p * log(2 * pi) - 0.5 * rss
-  }
-  else if (is.na(((lgamma((p + df) / 2) - (lgamma(df / 2) ))))){
-    logretval <- sum(log(abs(diag(Ainv)))) - 0.5 *  p * log(2 * pi) - 0.5 * rss
-  }
-  else if ((lgamma((p + df) / 2) - (lgamma(df / 2) )) == 0){
-    logretval <- sum(log(abs(diag(Ainv)))) - 0.5 *  p * log(2 * pi) - 0.5 * rss
-  } else{
-    logretval <- lgamma((p + df) / 2) - (lgamma(df / 2) - sum(log(abs(diag(Ainv)))) +
-                                           p / 2 * log(pi * df)) - 0.5 * (df + p) * log1p(rss / df)
-  }
-  if (log) {
-    logretval
+.dmvt2 <- function(x, delta, Ainv, nu = 1, log.p = TRUE) {
+  k <- ncol(x)
+  xA <- Ainv %*% (t(x) - delta)
+  xSx <- colSums(xA^2)
+  if (nu > 1e6) {
+    logDensity <- sum(log(abs(diag(Ainv)))) - 0.5 * k * log(2 * pi) - 0.5 * xSx
   } else {
-    exp(logretval)
+    logDensity <- sum(log(abs(diag(Ainv)))) + lgamma((k + nu) / 2) - lgamma(nu / 2) -
+      k / 2 * log(pi * nu) - 0.5 * (nu + k) * log1p(xSx / nu)
+  }
+  if (log.p) {
+    return(logDensity)
+  } else {
+    return(exp(logDensity))
   }
 }
 
 #' @keywords internal
-dmstil.grad <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000) {
+.mstil.grad.1 <- function(x, lambda, delta, Ainv, nu, u, control = list()) {
+  if (!"numGradSample" %in% names(control)) control$numGradSample <- 1e4
+  numGradSample <- control$numGradSample
+
   n <- nrow(x)
   k <- ncol(x)
   p <- ncol(lambda)
-  if (missing(u)) {
-    u <- mvtnorm::rmvt(sample.mc, delta = rep(0, k), sigma = diag(k), df = nu)
-  }
+  if (missing(u)) u <- mvtnorm::rmvt(numGradSample, delta = rep(0, k), sigma = diag(k), df = nu)
   m <- nrow(u)
   y <- t(t(x) - delta)
   xA <- Ainv %*% t(y)
@@ -46,8 +41,8 @@ dmstil.grad <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000) {
 
   gGz <- exp(gz - Gz)
   gGu <- exp(gu - Gu)
-  exp_Gu <- exp(rowSums(Gu))
-  E_Gu <- mean(exp_Gu)
+  expGu <- exp(rowSums(Gu))
+  EGu <- mean(expGu)
 
   t1 <- matrix(rep(1:k, k), nrow = k)[lower.tri(diag(k), diag = TRUE)]
   t2 <- rep(1:k, k:1)
@@ -55,50 +50,57 @@ dmstil.grad <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000) {
   grad_ <- colSums(2 / nu * (y[, t2] * t(xA)[, t1]) * C)
   grad[lower.tri(grad, diag = TRUE)] <- grad_
   grad <- -(nu + k) / 2 * grad + n * diag(1 / diag(Ainv))
-  dAinv_1 <- grad
-  dAinv_2 <- t(t(matrix(colSums(y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
-  dmu_1 <- rowSums(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C)))
-  dmu_2 <- as.vector(-(t(colSums(gGz)) %*% (t(lambda) %*% Ainv)))
-  dlambda_1 <- matrix(colSums(gGz[, rep(1:p, each = k)] * t(xA[rep(1:k, p), ])), nrow = k)
-  dlambda_2 <- matrix(colSums(exp_Gu * gGu[, rep(1:p, each = k)] * u[, rep(1:k, p)]), nrow = k) / m / E_Gu
+  dAinv1 <- grad
+  dAinv2 <- t(t(matrix(colSums(y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
+  dmu1 <- rowSums(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C)))
+  dmu2 <- as.vector(-(t(colSums(gGz)) %*% (t(lambda) %*% Ainv)))
+  dlambda1 <- matrix(colSums(gGz[, rep(1:p, each = k)] * t(xA[rep(1:k, p), ])), nrow = k)
+  dlambda2 <- matrix(colSums(expGu * gGu[, rep(1:p, each = k)] * u[, rep(1:k, p)]), nrow = k) / m / EGu
 
-  dlambda <- dlambda_1 - n * dlambda_2
+  dlambda <- dlambda1 - n * dlambda2
   dlambda[lower.tri(dlambda)] <- 0
-  dmu <- dmu_1 + dmu_2
-  dAinv <- dAinv_1 + dAinv_2
+  dmu <- dmu1 + dmu2
+  dAinv <- dAinv1 + dAinv2
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv))
 }
 
 #' @keywords internal
-fit.mstil.qcmle <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, maxit = 10, lambda.penalty = 0) {
+.fit.mstil.1 <- function(x, lambda, delta, Ainv, nu, control = list()) {
+  if (!"numGradSample" %in% names(control)) control$numGradSample <- 1e4
+  if (!"maxitOptim" %in% names(control)) control$maxitOptim <- 10
+  if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 0
+
+  numGradSample <- control$numGradSample
+  maxitOptim <- control$maxitOptim
+  lambdaPenalty <- control$lambdaPenalty
+
+
   p <- ncol(lambda)
   k <- ncol(x)
   n <- nrow(x)
-  if (missing(u)) {
-    u <- mvtnorm::rmvt(sample.mc, delta = rep(0, k), sigma = diag(k), df = nu)
-  }
+  u <- mvtnorm::rmvt(numGradSample, delta = rep(0, k), sigma = diag(k), df = nu)
 
   lik <- function(param) {
     lambda <- matrix(param[1:(p * k)], nrow = k)
     delta <- param[1:k + (p * k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
-    return(sum(dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - lambda.penalty * sum(abs(lambda)))
+    return(sum(dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - lambdaPenalty * sum(abs(lambda)))
   }
   grad <- function(param) {
     lambda <- matrix(param[1:(p * k)], nrow = k)
     delta <- param[1:k + (p * k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
-    grad <- dmstil.grad(x, lambda, delta, Ainv, nu, u)
-    grad$dlambda <- grad$dlambda - lambda.penalty * sign(lambda)
+    grad <- .mstil.grad.1(x, lambda, delta, Ainv, nu, u)
+    grad$dlambda <- grad$dlambda - lambdaPenalty * sign(lambda)
     gr <- c(as.vector(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)])
     return(gr)
   }
   param0 <- c(as.vector(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)])
 
 
-  res <- stats::optim(param0, lik, grad, method = 'BFGS', control = c(fnscale = -1, maxit = maxit))
+  res <- stats::optim(param0, lik, grad, method = "BFGS", control = c(fnscale = -1, maxit = maxitOptim))
   param1 <- res$par
   lambda1 <- matrix(param1[1:(p * k)], nrow = k)
   delta1 <- param1[1:k + (p * k)]
@@ -109,63 +111,91 @@ fit.mstil.qcmle <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, ma
 }
 
 #' @keywords internal
-dmstil.grad.nu <- function(x, lambda, delta, Ainv, nu, u, sample.mc = 10000, tol = 1e-5) {
+.mstil.grad.2 <- function(x, lambda, delta, Ainv, nu, u, control = list()) {
+  if (!"numGradSample" %in% names(control)) control$numGradSample <- 1e4
+  if (!"finDiffStep" %in% names(control)) control$finDiffStep <- 1e-5
+  numGradSample <- control$numGradSample
+  finDiffStep <- control$finDiffStep
   n <- nrow(x)
   k <- ncol(x)
-  if (missing(u)) {
-    u <- mvtnorm::rmvt(sample.mc, delta = rep(0, k), sigma = diag(k), df = nu)
-  }
+  if (missing(u)) u <- mvtnorm::rmvt(numGradSample, delta = rep(0, k), sigma = diag(k), df = nu)
   Gu <- stats::plogis(u %*% lambda, log.p = TRUE)
   rsG <- rowSums(Gu)
   z <- t((t(x) - delta)) %*% t(Ainv)
-  dnu_u <- (dmvt2(u, rep(0, k), diag(k), df = exp(log(nu) + tol)) - dmvt2(u, rep(0, k), diag(k), df = nu)) / tol
-  dnu_x <- (dmvt2(x, delta, Ainv, df = exp(log(nu) + tol)) - dmvt2(x, delta, Ainv, df = nu)) / tol
-  return(sum(dnu_x) - n * sum(dnu_u * rsG) / sum(rsG))
+  dnu2 <- (.dmvt2(u, rep(0, k), diag(k), nu = exp(log(nu) + finDiffStep)) - .dmvt2(u, rep(0, k), diag(k), nu = nu)) / finDiffStep
+  dnu1 <- (.dmvt2(x, delta, Ainv, nu = exp(log(nu) + finDiffStep)) - .dmvt2(x, delta, Ainv, nu = nu)) / finDiffStep
+  return(sum(dnu1) - n * sum(dnu2 * rsG) / sum(rsG))
 }
 
 #' @keywords internal
-fit.mstil.sgd <- function(x, lambda, delta, Ainv, nu, tol = 1e-5, step.size = 0.1, dim.rate = 0.1, iter = 100, sample.mc = 10000) {
-  for (i in 1:iter) {
-    grad <- dmstil.grad.nu(x, lambda, delta, Ainv, nu, sample.mc = sample.mc)
+.fit.mstil.2 <- function(x, lambda, delta, Ainv, nu, control = list()) {
+  if (!"stepSgd" %in% names(control)) control$stepSgd <- 1e-2
+  if (!"iterSgd" %in% names(control)) control$iterSgd <- 1e2
+  if (!"dimRateSgd" %in% names(control)) control$dimRateSgd <- 1e-2
+  if (!"finDiffStep" %in% names(control)) control$finDiffStep <- 1e-5
+  stepSgd <- control$stepSgd
+  iterSgd <- control$iterSgd
+  dimRateSgd <- control$dimRateSgd
+  finDiffStep <- control$finDiffStep
+  n <- nrow(x)
+  k <- ncol(x)
+  for (i in 1:iterSgd) {
+    grad <- .mstil.grad.2(x, lambda, delta, Ainv, nu, control = control)
     if (is.na(grad)) grad <- 0
-    nu <- exp(log(nu) + step.size * exp(-i * dim.rate) * grad)
-    nu <- max(nu, tol)
+    nu <- exp(log(nu) + stepSgd * exp(-i * dimRateSgd) * grad / n / k)
+    nu <- max(nu, finDiffStep)
   }
   return(nu)
 }
 
 #' @keywords internal
-dmstil.grad.weighted.nu <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 10000, tol = 1e-5) {
+.mstil.grad.2.weighted <- function(x, w, lambda, delta, Ainv, nu, u, control = list()) {
+  if (!"numGradSample" %in% names(control)) control$numGradSample <- 1e4
+  if (!"finDiffStep" %in% names(control)) control$finDiffStep <- 1e-5
+  numGradSample <- control$numGradSample
+  finDiffStep <- control$finDiffStep
   k <- ncol(x)
-  if (missing(u)) {
-    u <- mvtnorm::rmvt(sample.mc, delta = rep(0, k), sigma = diag(k), df = nu)
-  }
+  if (missing(u)) u <- mvtnorm::rmvt(numGradSample, delta = rep(0, k), sigma = diag(k), df = nu)
   Gu <- stats::plogis(u %*% lambda, log.p = TRUE)
   rsG <- rowSums(Gu)
-  dnu_u <- (dmvt2(u, rep(0, k), diag(k), df = exp(log(nu) + tol)) - dmvt2(u, rep(0, k), diag(k), df = nu)) / tol
-  dnu_x <- (dmvt2(x, delta, Ainv, df = exp(log(nu) + tol)) - dmvt2(x, delta, Ainv, df = nu)) / tol
-  return(sum(w * dnu_x) - sum(w) * sum(dnu_u * rsG) / sum(rsG))
+  dnu2 <- (.dmvt2(u, rep(0, k), diag(k), nu = exp(log(nu) + finDiffStep)) - .dmvt2(u, rep(0, k), diag(k), nu = nu)) / finDiffStep
+  dnu1 <- (.dmvt2(x, delta, Ainv, nu = exp(log(nu) + finDiffStep)) - .dmvt2(x, delta, Ainv, nu = nu)) / finDiffStep
+  return(sum(w * dnu1) - sum(w) * sum(dnu2 * rsG) / sum(rsG))
 }
 
 #' @keywords internal
-fit.mstil.weighted.sgd <- function(x, w, lambda, delta, Ainv, nu, tol = 1e-5, step.size = 0.1, dim.rate = 0.1, iter = 100, sample.mc = 10000) {
-  for (i in 1:iter) {
-    grad <- dmstil.grad.weighted.nu(x, w, lambda, delta, Ainv, nu, sample.mc = sample.mc)
+.fit.mstil.2.weighted <- function(x, w, lambda, delta, Ainv, nu, control = list()) {
+  if (!"stepSgd" %in% names(control)) control$stepSgd <- 1e-2
+  if (!"iterSgd" %in% names(control)) control$iterSgd <- 1e2
+  if (!"dimRateSgd" %in% names(control)) control$dimRateSgd <- 1e-2
+  if (!"finDiffStep" %in% names(control)) control$finDiffStep <- 1e-5
+  stepSgd <- control$stepSgd
+  iterSgd <- control$iterSgd
+  dimRateSgd <- control$dimRateSgd
+  finDiffStep <- control$finDiffStep
+  n <- nrow(x)
+  k <- ncol(x)
+
+  for (i in 1:iterSgd) {
+    grad <- .mstil.grad.2.weighted(x, w, lambda, delta, Ainv, nu, control = control)
     if (is.na(grad)) grad <- 0
-    nu <- exp(log(nu) + step.size * exp(-i * dim.rate) * grad)
-    nu <- max(nu, tol)
+    nu <- exp(log(nu) + stepSgd * exp(-i * dimRateSgd) * grad / n / k)
+    nu <- max(nu, finDiffStep)
   }
   return(nu)
 }
 
 #' @keywords internal
-dmstil.grad.weighted <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 10000) {
+.mstil.grad.1.weighted <- function(x, w, lambda, delta, Ainv, nu, u, control = list()) {
+  if (!"numGradSample" %in% names(control)) control$numGradSample <- 1e4
+  numGradSample <- control$numGradSample
+
+
   n <- nrow(x)
   k <- ncol(x)
   p <- ncol(lambda)
-  if (missing(u)) {
-    u <- mvtnorm::rmvt(sample.mc, delta = rep(0, k), sigma = diag(k), df = nu)
-  }
+  if (missing(u)) u <- mvtnorm::rmvt(numGradSample, delta = rep(0, k), sigma = diag(k), df = nu)
+
   m <- nrow(u)
   y <- t(t(x) - delta)
   xA <- Ainv %*% t(y)
@@ -181,8 +211,8 @@ dmstil.grad.weighted <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 1
   gu <- stats::dlogis(lambdau, log = TRUE)
   gGz <- exp(gz - Gz)
   gGu <- exp(gu - Gu)
-  exp_Gu <- exp(rowSums(Gu))
-  E_Gu <- mean(exp_Gu)
+  expGu <- exp(rowSums(Gu))
+  EGu <- mean(expGu)
 
   t1 <- matrix(rep(1:k, k), nrow = k)[lower.tri(diag(k), diag = TRUE)]
   t2 <- rep(1:k, k:1)
@@ -190,50 +220,57 @@ dmstil.grad.weighted <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 1
   grad_ <- colSums(w * (2 / nu * (y[, t2] * t(xA)[, t1]) * C))
   grad[lower.tri(grad, diag = TRUE)] <- grad_
   grad <- -(nu + k) / 2 * grad + sum(w) * diag(1 / diag(Ainv))
-  dAinv_1 <- grad
-  dAinv_2 <- t(t(matrix(colSums(w * y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
+  dAinv1 <- grad
+  dAinv2 <- t(t(matrix(colSums(w * y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
 
-  dmu_1 <- colSums(w * t(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C))))
-  dmu_2 <- as.vector(-(t(colSums(w * gGz)) %*% (t(lambda) %*% Ainv)))
-  dlambda_1 <- matrix(colSums(w * gGz[, rep(1:p, each = k)] * t(xA[rep(1:k, p), ])), nrow = k)
-  dlambda_2 <- matrix(colSums(exp_Gu * gGu[, rep(1:p, each = k)] * u[, rep(1:k, p)]), nrow = k) / m / E_Gu
+  dmu1 <- colSums(w * t(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C))))
+  dmu2 <- as.vector(-(t(colSums(w * gGz)) %*% (t(lambda) %*% Ainv)))
+  dlambda1 <- matrix(colSums(w * gGz[, rep(1:p, each = k)] * t(xA[rep(1:k, p), ])), nrow = k)
+  dlambda2 <- matrix(colSums(expGu * gGu[, rep(1:p, each = k)] * u[, rep(1:k, p)]), nrow = k) / m / EGu
 
-  dlambda <- dlambda_1 - sum(w) * dlambda_2
+  dlambda <- dlambda1 - sum(w) * dlambda2
   dlambda[lower.tri(dlambda)] <- 0
-  dmu <- dmu_1 + dmu_2
-  dAinv <- dAinv_1 + dAinv_2
+  dmu <- dmu1 + dmu2
+  dAinv <- dAinv1 + dAinv2
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv))
 }
 
 #' @keywords internal
-fit.mstil.weighted.qmle <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc = 10000, maxit = 10, lambda.penalty = 0) {
+.fit.mstil.1.weighted <- function(x, w, lambda, delta, Ainv, nu, control = list()) {
+  if (!"numGradSample" %in% names(control)) control$numGradSample <- 1e4
+  if (!"maxitOptim" %in% names(control)) control$maxitOptim <- 10
+  if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 0
+
+
+  numGradSample <- control$numGradSample
+  maxitOptim <- control$maxitOptim
+  lambdaPenalty <- control$lambdaPenalty
   p <- ncol(lambda)
   k <- ncol(x)
   n <- nrow(x)
 
-  if (missing(u)) {
-    u <- mvtnorm::rmvt(sample.mc, delta = rep(0, k), sigma = diag(k), df = nu)
-  }
+  u <- mvtnorm::rmvt(numGradSample, delta = rep(0, k), sigma = diag(k), df = nu)
   lik <- function(param) {
     lambda <- matrix(param[1:(p * k)], nrow = k)
     delta <- param[1:k + (p * k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
-    return(sum(w * dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - lambda.penalty * sum(abs(lambda)))
+    val <- sum(w * dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - lambdaPenalty * sum(abs(lambda))
+    return(val)
   }
   grad <- function(param) {
     lambda <- matrix(param[1:(p * k)], nrow = k)
     delta <- param[1:k + (p * k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
-    grad <- dmstil.grad.weighted(x, w, lambda, delta, Ainv, nu, u)
-    grad$dlambda <- grad$dlambda - lambda.penalty * sign(lambda)
+    grad <- .mstil.grad.1.weighted(x, w, lambda, delta, Ainv, nu, u)
+    grad$dlambda <- grad$dlambda - lambdaPenalty * sign(lambda)
     gr <- c(as.vector(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)])
     return(gr)
   }
   param0 <- c(as.vector(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)])
-  
-  res <- stats::optim(param0, lik, grad, method = 'BFGS', control = c(fnscale = -1, maxit = maxit))
+
+  res <- stats::optim(param0, lik, grad, method = "BFGS", control = c(fnscale = -1, maxit = maxitOptim))
   param1 <- res$par
   lambda1 <- matrix(param1[1:(p * k)], nrow = k)
   delta1 <- param1[1:k + (p * k)]
@@ -244,26 +281,7 @@ fit.mstil.weighted.qmle <- function(x, w, lambda, delta, Ainv, nu, u, sample.mc 
 }
 
 #' @keywords internal
-mstil.weight <- function(x, omega, lambda, delta, Ainv, nu, u, sample.mc = 1000000) {
-  K <- length(omega)
-  k <- ncol(x)
-  n <- nrow(x)
-  w <- matrix(NA, nrow = n, ncol = K)
-
-  if (missing(u)) {
-    u <- list()
-    for (i in 1:K){
-      u[[i]] <- mvtnorm::rmvt(sample.mc, delta = rep(0, k), sigma = diag(k), df = nu[[i]])
-    } 
-  }
-  for (i in 1:K) {
-    w[, i] <- omega[i] * dmstil(x, lambda[[i]], delta[[i]], Ainv[[i]], nu[[i]], u[[i]], log.p = FALSE)
-  }
-  return(w)
-}
-
-#' @keywords internal
-dmstil.r.grad <- function(x, lambda, delta, Ainv, nu) {
+.mstil.r.grad <- function(x, lambda, delta, Ainv, nu) {
   n <- nrow(x)
   k <- ncol(x)
   p <- ncol(lambda)
@@ -285,22 +303,65 @@ dmstil.r.grad <- function(x, lambda, delta, Ainv, nu) {
   grad_ <- colSums(2 / nu * (y[, t2] * t(xA)[, t1]) * C)
   grad[lower.tri(grad, diag = TRUE)] <- grad_
   grad <- -(nu + k) / 2 * grad + n * diag(1 / diag(Ainv))
-  dAinv_1 <- grad
-  dAinv_2 <- t(t(matrix(colSums(y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
-  dmu_1 <- rowSums(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C)))
-  dmu_2 <- as.vector(-(t(colSums(gGz)) %*% (t(lambda) %*% Ainv)))
-  dlambda_1 <- diag(colSums(gGz * t(xA)))
-  dnu_1 <- sum((digamma((nu + k) / 2) - digamma(nu / 2)) / 2 - k / 2 / nu - 0.5 * (log1p(xSx / nu) + (nu + k) / (1 + xSx / nu) * xSx * (-1) / nu^2))
-  dlambda <- dlambda_1
-  dmu <- dmu_1 + dmu_2
-  dAinv <- dAinv_1 + dAinv_2
-  dnu <- dnu_1
-  dlnu <- dnu_1 * nu
+  dAinv1 <- grad
+  dAinv2 <- t(t(matrix(colSums(y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
+  dmu1 <- rowSums(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C)))
+  dmu2 <- as.vector(-(t(colSums(gGz)) %*% (t(lambda) %*% Ainv)))
+  dlambda1 <- diag(colSums(gGz * t(xA)))
+  dnu1 <- sum((digamma((nu + k) / 2) - digamma(nu / 2)) / 2 - k / 2 / nu - 0.5 * (log1p(xSx / nu) + (nu + k) / (1 + xSx / nu) * xSx * (-1) / nu^2))
+  dlambda <- dlambda1
+  dmu <- dmu1 + dmu2
+  dAinv <- dAinv1 + dAinv2
+  dnu <- dnu1
+  dlnu <- dnu1 * nu
   return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu, dlnu = dlnu))
 }
 
 #' @keywords internal
-fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, lambda.penalty = 0) {
+.mstil.r.grad.weighted <- function(x, w, lambda, delta, Ainv, nu) {
+  n <- nrow(x)
+  k <- ncol(x)
+  p <- ncol(lambda)
+  y <- t(t(x) - delta)
+  xA <- Ainv %*% t(y)
+  z <- t(xA)
+  xSx <- colSums(xA^2)
+  C <- 1 / (1 + 1 / nu * xSx)
+  lambdaz <- z %*% lambda
+  Gz <- stats::plogis(lambdaz, log.p = TRUE)
+  gz <- stats::dlogis(lambdaz, log = TRUE)
+  gGz <- exp(gz - Gz)
+
+
+  t1 <- matrix(rep(1:k, k), nrow = k)[lower.tri(diag(k), diag = TRUE)]
+  t2 <- rep(1:k, k:1)
+  grad <- matrix(0, nrow = k, ncol = k)
+  grad_ <- colSums(w * 2 / nu * (y[, t2] * t(xA)[, t1]) * C)
+  grad[lower.tri(grad, diag = TRUE)] <- grad_
+  grad <- -(nu + k) / 2 * grad + sum(w) * diag(1 / diag(Ainv))
+  dAinv1 <- grad
+  dAinv2 <- t(t(matrix(colSums(w * y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
+
+  dmu1 <- colSums(w * t(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C))))
+  dmu2 <- as.vector(-(t(colSums(w * gGz)) %*% (t(lambda) %*% Ainv)))
+  dlambda1 <- diag(colSums(w * gGz * t(xA)))
+  dnu1 <- sum(w * ((digamma((nu + k) / 2) - digamma(nu / 2)) / 2 - k / 2 / nu - 0.5 * (log1p(xSx / nu) + (nu + k) / (1 + xSx / nu) * xSx * (-1) / nu^2)))
+  dlambda <- dlambda1
+  dmu <- dmu1 + dmu2
+  dAinv <- dAinv1 + dAinv2
+  dnu <- dnu1
+  dlnu <- dnu * nu
+  return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu, dlnu = dlnu))
+}
+
+#' @keywords internal
+.fit.fmmstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, control = list()) {
+  if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 0
+  if (!"maxitOptimR" %in% names(control)) control$maxitOptimR <- 1e3
+
+  maxitOptimR <- control$maxitOptimR
+  lambdaPenalty <- control$lambdaPenalty
+
   k <- ncol(x)
   n <- nrow(x)
   lik <- function(param) {
@@ -309,8 +370,8 @@ fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, la
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
     lnu <- param[length(param)]
-    nu <- exp(lnu) 
-    res <- sum(w * dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE) - lambda.penalty * sum(abs(lambda)))
+    nu <- exp(lnu)
+    res <- sum(w * dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE) - lambdaPenalty * sum(abs(lambda)))
     return(res)
   }
   grad <- function(param) {
@@ -320,15 +381,15 @@ fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, la
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
     lnu <- param[length(param)]
     nu <- exp(lnu)
-    grad <- dmstil.r.grad.weighted(x, w, lambda, delta, Ainv, nu)
-    grad$dlambda <- grad$dlambda - lambda.penalty * sign(lambda)
+    grad <- .mstil.r.grad.weighted(x, w, lambda, delta, Ainv, nu)
+    grad$dlambda <- grad$dlambda - lambdaPenalty * sign(lambda)
     gr <- c(diag(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)], grad$dlnu)
     return(gr)
   }
   param0 <- c(diag(lambda), delta, Ainv[lower.tri(diag(k), diag = TRUE)], log(nu))
-  
-  
-  res <- stats::optim(param0, lik, grad, method = 'BFGS', control = c(fnscale = -1, maxit = maxit))
+
+
+  res <- stats::optim(param0, lik, grad, method = "BFGS", control = c(fnscale = -1, maxit = maxitOptimR))
   param1 <- res$par
   lambda1 <- diag(param1[1:k])
   delta1 <- param1[1:k + (k)]
@@ -340,109 +401,57 @@ fit.mstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, maxit = 1000, la
 }
 
 #' @keywords internal
-dmstil.r.grad.weighted <- function(x, w, lambda, delta, Ainv, nu) {
-  n <- nrow(x)
-  k <- ncol(x)
-  p <- ncol(lambda)
-  y <- t(t(x) - delta)
-  xA <- Ainv %*% t(y)
-  z <- t(xA)
-  xSx <- colSums(xA^2)
-  C <- 1 / (1 + 1 / nu * xSx)
-  lambdaz <- z %*% lambda
-  Gz <- stats::plogis(lambdaz, log.p = TRUE)
-  gz <- stats::dlogis(lambdaz, log = TRUE)
-  gGz <- exp(gz - Gz)
-
-
-  t1 <- matrix(rep(1:k, k), nrow = k)[lower.tri(diag(k), diag = TRUE)]
-  t2 <- rep(1:k, k:1)
-  grad <- matrix(0, nrow = k, ncol = k)
-  grad_ <- colSums( w * 2 / nu * (y[, t2] * t(xA)[, t1]) * C)
-  grad[lower.tri(grad, diag = TRUE)] <- grad_
-  grad <- -(nu + k) / 2 * grad + sum(w) * diag(1 / diag(Ainv))
-  dAinv_1 <- grad
-  dAinv_2 <- t(t(matrix(colSums(w * y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
-  
-  dmu_1 <- colSums(w * t(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C))))
-  dmu_2 <- as.vector(-(t(colSums(w * gGz)) %*% (t(lambda) %*% Ainv)))
-  dlambda_1 <- diag(colSums(w * gGz * t(xA)))
-  dnu_1 <- sum(w * ((digamma((nu + k) / 2) - digamma(nu / 2)) / 2 - k / 2 / nu - 0.5 * (log1p(xSx / nu) + (nu + k) / (1 + xSx / nu) * xSx * (-1) / nu^2)))
-  dlambda <- dlambda_1
-  dmu <- dmu_1 + dmu_2
-  dAinv <- dAinv_1 + dAinv_2
-  dnu <- dnu_1
-  dlnu <- dnu * nu
-  return(list(dlambda = dlambda, dmu = dmu, dAinv = dAinv, dnu = dnu, dlnu = dlnu))
-}
-
-#' @keywords internal
-mstil.r.weight <- function(x, omega, lambda, delta, Ainv, nu) {
+.fmmstil.weight <- function(x, omega, lambda, delta, Ainv, nu, u, control = list()) {
+  if (!"numLikSample" %in% names(control)) control$numLikSample <- 1e6
+  numLikSample <- control$numLikSample
   K <- length(omega)
+  k <- ncol(x)
   n <- nrow(x)
   w <- matrix(NA, nrow = n, ncol = K)
-
+  
+  if (missing(u)) {
+    u <- list()
+    for (i in 1:K) {
+      u[[i]] <- mvtnorm::rmvt(numLikSample, delta = rep(0, k), sigma = diag(k), df = nu[[i]])
+    }
+  }
   for (i in 1:K) {
-    w[, i] <- omega[i] * dmstil.r(x, lambda[[i]], delta[[i]], Ainv[[i]], nu[[i]], log.p = FALSE)
+    w[, i] <- omega[[i]] * dmstil(x, lambda[[i]], delta[[i]], Ainv[[i]], nu[[i]], u[[i]], log.p = FALSE)
   }
   return(w)
 }
 
 #' @keywords internal
-ICL.fun = function(weight, K, m, n){
-  logL = sum(log(rowSums(weight)))
-  weight = weight / rowSums(weight)
-  guess = apply(weight, 1, which.max)
-  n.K = table(guess)
-  m.K = m * K + K - 1
-  ICL = logL + 
-    m.K / 2 * log(n) +
-    lgamma(K / 2) + sum(log(apply(weight, 1, max)))
-  sum(lgamma(n.K + 0.5)) -
-    K * lgamma(0.5) -
-    lgamma(n + K / 2)
-  if (any(n.K < 10) || length(n.K) < K) ICL <- -Inf  
-  return(ICL)
-}
+.fmmstil.r.weight <- function(x, omega, lambda, delta, Ainv, nu) {
+  K <- length(omega)
+  n <- nrow(x)
+  w <- matrix(NA, nrow = n, ncol = K)
 
-#' @keywords internal
-default.init.method = function(x){
-  res = list()
-  res$lambda = diag(stats::runif(3,-0.5,0.5))
-  res$delta = x[sample(nrow(x),1),]
-  res$Ainv = t(solve(chol(stats::cov(x))))
-  res$nu = 10
-  return(res)
-}
-
-#' @keywords internal
-default.init.cluster = function(x, K){
-  init.cluster.prob = stats::runif(K) + 1
-  init.cluster.prob = init.cluster.prob/sum(init.cluster.prob)
-  init.cluster = sample(K, nrow(x), replace = TRUE, prob = init.cluster.prob)
-  return(init.cluster)
-}
-
-
-#' @keywords internal
-cluster.mstil.r.1 = function(seed, x, K, init.cluster.method, init.method, ...){
-  k = ncol(x)
-  set.seed(seed)
-  if (missing(init.cluster.method)) init.cluster.method = default.init.cluster
-  if (missing(init.method)) init.method = default.init.method
-  init.cluster = init.cluster.method(x, K)
-  
-  res1 = tryCatch(fit.fmmstil.r(x, K, init.cluster = init.cluster, init.method = init.method, print.progress = FALSE, ...),
-                error = function(e) NA,
-                warning = function(w) NA)
-  if (is.list(res1)){
-    par = res1$par[[which.max(res1$logL)]]
-    classify1 = mstil.r.weight(x, par$omega, par$lambda, par$delta, par$Ainv, par$nu)
-    guess1 = apply(classify1, 1, which.max)
-    ICL = ICL.fun(classify1, K, k + k + 1 + k * (k + 1) / 2, nrow(x))
-    res1$ICL <- ICL
-    res1$clust = guess1
+  for (i in 1:K) {
+    w[, i] <- omega[[i]] * dmstil.r(x, lambda[[i]], delta[[i]], Ainv[[i]], nu[[i]], log.p = FALSE)
   }
-  return(res1)
+  return(w)
+}
+
+#' @keywords internal
+.default.init.param.method <- function(x) {
+  param <- list(
+    lambda = diag(stats::runif(ncol(x), -0.5, 0.5)),
+    delta = x[sample(nrow(x), 1), ],
+    Ainv = tryCatch(t(solve(chol(stats::cov(x)))),
+      error = function(e) 1 / sqrt(stats::cov(x)),
+      warning = function(w) 1 / sqrt(stats::cov(x))
+    ),
+    nu = 10
+  )
+  return(param)
+}
+
+#' @keywords internal
+.default.init.cluster.method <- function(x, K) {
+  prob <- stats::runif(K) + 1
+  prob <- prob / sum(prob)
+  init.cluster <- sample(K, nrow(x), replace = TRUE, prob = prob)
+  return(init.cluster)
 }
 

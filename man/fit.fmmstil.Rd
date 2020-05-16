@@ -7,79 +7,55 @@
 fit.fmmstil(
   x,
   K,
-  omega,
-  lambda,
-  delta,
-  Ainv,
-  nu,
+  param,
   init.cluster,
-  init.method,
-  sgd.step.size = 0.01,
-  sgd.dim.rate = 0.01,
-  sgd.iter = 100,
-  sgd.tol = 1e-05,
-  sample.mc = 10000,
-  maxit.bfgs = 10,
-  maxit.qmle = 1,
-  maxit = 1000,
-  convergence.n = 5,
-  sample.logL = 1e+06,
-  lambda.penalty = 0,
-  print.progress = TRUE
+  init.param.method,
+  show.progress = TRUE,
+  control = list()
 )
 }
 \arguments{
-\item{x}{a n x k matrix, representing n k-variate samples.}
+\item{x}{matrix of quantiles of size n x k. Each row is taken as a quantile.}
 
-\item{K}{a positive integer, number of clusters.}
+\item{K}{number of clusters.}
 
-\item{omega}{a positive numeric vector of length K, where sum of the vector equals to 1.}
+\item{param}{list of lists of inital parameters, containing omega, lambda, delta, Ainv, and nu.}
 
-\item{lambda}{list of K numeric skewing matrices of size k x p.}
+\item{init.cluster}{(optional) initial clusters used to find initial parameters.}
 
-\item{delta}{list of K numeric vectors of length k, representing the location parameter.}
+\item{init.param.method}{(optional) method to obtain initial parameters. It needs to be a function of x and K, and return a list of list of parameters.}
 
-\item{Ainv}{list of lower triangular numeric matrices of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.}
+\item{show.progress}{a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.}
 
-\item{nu}{list of positive values representing the degree of freedom.}
-
-\item{init.cluster}{initial cluster to help set initial parameters}
-
-\item{init.method}{method to find initial parameters.}
-
-\item{sgd.step.size}{a positive value representing the step size used in fitting nu. By default 0.1.}
-
-\item{sgd.dim.rate}{a non-negative value representing the step size diminishing rate used in fitting nu. By default 0.01.}
-
-\item{sgd.iter}{a positive integer representing the number of iterations used in fitting nu. By default 100.}
-
-\item{sgd.tol}{a positive value, representing the finite difference tolerance for gradient estimations.}
-
-\item{sample.mc}{a positive integer, representing the number of monte carlo samples used in the quasi log-likelihood function. By default 10000.}
-
-\item{maxit.bfgs}{a positive integer, representing the maximum number of iterations used in the QMLE step. By default 10.}
-
-\item{maxit.qmle}{a positive integer, representing the number of iteration within each M-step.}
-
-\item{maxit}{a positive integer, representing the maximum number of iterations. By default 1000.}
-
-\item{convergence.n}{a positive integer, the algorithm stops when estimated log-likelihood does not increase in "convergence.n" consecutive iterations. By default 5.}
-
-\item{sample.logL}{a positive integer, representing the number of monte carlo samples used to estimate the current log-likelihood. By default 1000000.}
-
-\item{lambda.penalty}{a non-negative value, representing the parameter of the penalty term. By default 0.}
-
-\item{print.progress}{a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.}
+\item{control}{list of control variables, see 'details'.}
 }
 \value{
 a list with components:
-\item{logL}{a vector of the estimated log-likelihood function after each itereation.}
-\item{par}{a list of list of fitted parameters after each iteration. Within each list, "lambda" is the fitted skewing matrix, "delta" is the location parameter, "Ainv" is the reparameterised scale parameter, "nu" is the degree of freedom.}
-\item{time}{a non-negative numeric vector, records the time elapsed after each iteration.}
+\item{logLik}{a vector recording the estimated log-likelihood after each itereation.}
+\item{par}{a list of list of list of fitted parameters after each iteration.}
+\item{time}{a vectorrecording the time elapsed after each iteration.}
 }
 \description{
 This function finds the penalised quasi likelihood estiamtes for finite mixture of mstil via EM.
 }
+\details{
+The control argument is a list that accepts the following components.
+\describe{
+\item{numLikSample}{number of samples used to estimate the density and log-likelihood functions. By default 1e6. }
+\item{conLevel}{numeric between 0.5 and 1. Confidence level of the log-likelihood. By default 0.95.}
+\item{cvgCon}{non-negative interger. The algorithm stops when the estimated maximum penalised log-likelihood is not improved in cvgCon iterations. By default 5.}
+\item{lambdaPenalty}{L1 penalty coefficient for lambda. By default 0.}
+\item{maxit}{maximum number of EM iterations. By default 1000.}
+\item{maxitOptim}{maximum number of iterations in optim within each M-step. By default 10.}
+\item{numGradSample}{number of samples used to estimate the gradient. By default 1e4.}
+\item{finDiffStep}{step size to estimate gradient w.r.t. nu. By default 1e-5.}
+\item{stepSgd}{step size to be used in the stochastic gradient step. By default 1e-2.}
+\item{iterSgd}{number of iterations to be used in the stochastic gradient step. By default 1e2.}
+\item{dimRateSgd}{dimishing rate for step size to be used in the stochastic gradient step. By default 1e-2.}
+}
+}
 \examples{
 # Not run:
+# data(RiverFlow)
+# fit.fmmstil(as.matrix(log(RiverFlow)), 2)
 }

@@ -4,32 +4,33 @@
 \alias{fit.mstil.r}
 \title{This function finds the maximum likelihood estimations for restricted mstil.}
 \usage{
-fit.mstil.r(x, lambda, delta, Ainv, nu, maxit = 1000, lambda.penalty = 0)
+fit.mstil.r(x, param, control = list())
 }
 \arguments{
 \item{x}{a n x k matrix, representing n k-variate samples.}
 
-\item{lambda}{a numeric diagonal skewing matrix of size k x k.}
+\item{param}{list of inital parameters, containing lambda, delta, Ainv, and nu.}
 
-\item{delta}{a numeric vector of length k, representing the location parameter.}
-
-\item{Ainv}{an lower triangular numeric matrix of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.}
-
-\item{nu}{a positive value representing the degree of freedom/}
-
-\item{maxit}{a positive integer, representing the maximum number of iterations. By default 1000.}
-
-\item{lambda.penalty}{L1 penalty coefficient for lambda.}
+\item{control}{list of control variables, see 'details'.
+#@details The control argument is a list that accepts the following components.
+\describe{
+\item{lambdaPenalty}{L1 penalty coefficient for lambda. By default 0.}
+\item{maxitOptimR}{maximum number of iterations in optim.. By default 1e3.}
+}}
 }
 \value{
 a list with components:
-\item{logL}{a vector of the estimated log-likelihood function after each itereation.}
-\item{par}{a list of list of fitted parameters after each iteration. Within each list, "lambda" is the fitted skewing matrix, "delta" is the location parameter, "Ainv" is the reparameterised scale parameter, "nu" is the degree of freedom.}
-\item{time}{a non-negative numeric vector, records the time elapsed after each iteration.}
+\item{lambda}{fitted lambda.}
+\item{delta}{fitted delta.}
+\item{Ainv}{fitted Ainv.}
+\item{nu}{fitted nu.}
+\item{logLik}{value of fitted log-Likelihood.}
 }
 \description{
 This function finds the maximum likelihood estimations for restricted mstil.
 }
 \examples{
 # Not run:
+# data(RiverFlow)
+# fit.mstil.r(as.matrix(log(RiverFlow)))
 }

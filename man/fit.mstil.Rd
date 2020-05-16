@@ -2,76 +2,48 @@
 % Please edit documentation in R/mstil.R
 \name{fit.mstil}
 \alias{fit.mstil}
-\title{This function finds the penalised quasi likelihood estiamtes for mstil.}
+\title{This function finds the maximum penalised quasi likelihood estiamtes for mstil.}
 \usage{
-fit.mstil(
-  x,
-  lambda,
-  delta,
-  Ainv,
-  nu,
-  sgd.step.size = 0.1,
-  sgd.dim.rate = 0.01,
-  sgd.iter = 100,
-  sgd.tol = 1e-05,
-  sample.mc = 10000,
-  maxit.bfgs = 10,
-  maxit = 1000,
-  convergence.n = 5,
-  sample.logL = 1e+06,
-  q = 0.95,
-  lambda.penalty = 0,
-  print.progress = TRUE
-)
+fit.mstil(x, param, show.progress = TRUE, control = list())
 }
 \arguments{
-\item{x}{a n x k matrix, representing n k-variate samples.}
+\item{x}{matrix of quantiles of size n x k. Each row is taken as a quantile.}
 
-\item{lambda}{a numeric skewing matrix of size k x p.}
+\item{param}{list of inital parameters, containing lambda, delta, Ainv, and nu.}
 
-\item{delta}{a numeric vector of length k, representing the location parameter.}
+\item{show.progress}{a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.}
 
-\item{Ainv}{an lower triangular numeric matrix of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.}
-
-\item{nu}{a positive value representing the degree of freedom/}
-
-\item{sgd.step.size}{a positive value representing the step size used in fitting nu. By default 0.1.}
-
-\item{sgd.dim.rate}{a non-negative value representing the step size diminishing rate used in fitting nu. By default 0.01.}
-
-\item{sgd.iter}{a positive integer representing the number of iterations used in fitting nu. By default 100.}
-
-\item{sgd.tol}{a positive value, representing the finite difference tolerance for gradient estimations.}
-
-\item{sample.mc}{a positive integer, representing the number of monte carlo samples used in the quasi log-likelihood function. By default 10000.}
-
-\item{maxit.bfgs}{a positive integer, representing the maximum number of iterations used in the QMLE step. By default 10.}
-
-\item{maxit}{a positive integer, representing the maximum number of iterations. By default 1000.}
-
-\item{convergence.n}{a positive integer, the algorithm stops when estimated log-likelihood does not increase in "convergence.n" consecutive iterations. By default 5.}
-
-\item{sample.logL}{a positive integer, representing the number of monte carlo samples used to estimate the current log-likelihood. By default 1000000.}
-
-\item{q}{a value in range (0.5,1), representing the 2-sided confidence interval percentage. By default 0.95.}
-
-\item{lambda.penalty}{a non-negative value, representing the parameter of the penalty term. By default 0.}
-
-\item{print.progress}{a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.}
+\item{control}{list of control variables, see 'details'.}
 }
 \value{
 a list with components:
-\item{logL}{a vector of the estimated log-likelihood function after each itereation.}
+\item{logLik}{a vector of the estimated log-likelihood function after each itereation.}
 \item{par}{a list of list of fitted parameters after each iteration. Within each list, "lambda" is the fitted skewing matrix, "delta" is the location parameter, "Ainv" is the reparameterised scale parameter, "nu" is the degree of freedom.}
-\item{logL.lower}{a numeric vector of the lower bound of the estimated log-likelihood function after each iteration.}
-\item{logL.upper}{a numeric vector of the upper bound of the estimated log-likelihood function after each iteration.}
-\item{fun.value}{a numeric vector of the fitted penalised quasi log-likelihood function at each iteration.}
+\item{logLikLower}{a numeric vector of the lower bound of the estimated log-likelihood function after each iteration.}
+\item{logLikUpper}{a numeric vector of the upper bound of the estimated log-likelihood function after each iteration.}
 \item{time}{a non-negative numeric vector, records the time elapsed after each iteration.}
 }
 \description{
-This function finds the penalised quasi likelihood estiamtes for mstil.
+This function finds the maximum penalised quasi likelihood estiamtes for mstil.
+}
+\details{
+The control argument is a list that accepts the following components.
+\describe{
+\item{numLikSample}{number of samples used to estimate the density and log-likelihood functions. By default 1e6. }
+\item{conLevel}{numeric between 0.5 and 1. Confidence level of the log-likelihood. By default 0.95.}
+\item{cvgCon}{non-negative interger. The algorithm stops when the estimated maximum penalised log-likelihood is not improved in cvgCon iterations. By default 5.}
+\item{lambdaPenalty}{L1 penalty coefficient for lambda. By default 0.}
+\item{maxit}{maximum number iterations. By default 1000.}
+\item{maxitOptim}{maximum number of iterations in optim. By default 10.}
+\item{numGradSample}{number of samples used to estimate the gradient. By default 1e4.}
+\item{finDiffStep}{step size to estimate gradient w.r.t. nu. By default 1e-5.}
+\item{stepSgd}{step size to be used in the stochastic gradient step. By default 1e-2.}
+\item{iterSgd}{number of iterations to be used in the stochastic gradient step. By default 1e2.}
+\item{dimRateSgd}{dimishing rate for step size to be used in the stochastic gradient step. By default 1e-2.}
+}
 }
 \examples{
 # Not run:
-# fit.mstil(log(RiverFlow))
+# data(RiverFlow)
+# fit.mstil(as.matrix(log(RiverFlow)))
 }

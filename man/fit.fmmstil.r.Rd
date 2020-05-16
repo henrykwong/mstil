@@ -7,58 +7,48 @@
 fit.fmmstil.r(
   x,
   K,
-  omega,
-  lambda,
-  delta,
-  Ainv,
-  nu,
+  param,
   init.cluster,
-  init.method,
-  maxit.bfgs = 1000,
-  maxit = 1000,
-  convergence.tol = 0.01,
-  lambda.penalty = 0,
-  print.progress = TRUE
+  init.param.method,
+  show.progress = TRUE,
+  control = list()
 )
 }
 \arguments{
-\item{x}{a n x k matrix, representing n k-variate samples.}
+\item{x}{matrix of quantiles of size n x k. Each row is taken as a quantile.}
 
-\item{K}{a positive integer, number of clusters.}
+\item{K}{number of clusters.}
 
-\item{omega}{a positive numeric vector of length K, where sum of the vector equals to 1.}
+\item{param}{list of lists of inital parameters, containing omega, lambda, delta, Ainv, and nu.}
 
-\item{lambda}{list of K numeric skewing matrices of size k x p.}
+\item{init.cluster}{(optional) initial clusters used to find initial parameters.}
 
-\item{delta}{list of K numeric vectors of length k, representing the location parameter.}
+\item{init.param.method}{(optional) method to obtain initial parameters. It needs to be a function of x that returns a list of list of parameters.}
 
-\item{Ainv}{list of lower triangular numeric matrices of size k x k, where t(Ainv) "times" Ainv representing the inverse of the scale parameter.}
+\item{show.progress}{a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.}
 
-\item{nu}{list of positive values representing the degree of freedom.}
-
-\item{init.cluster}{initial cluster to help set initial parameters}
-
-\item{init.method}{method to find initial parameters.}
-
-\item{maxit.bfgs}{a positive integer, representing the maximum number of iterations used in the MLE step. By default 1000.}
-
-\item{maxit}{a positive integer, representing the maximum number of iterations. By default 1000.}
-
-\item{convergence.tol}{the maximum tolerance before the algorithm stops.}
-
-\item{lambda.penalty}{L1 penalty coefficient for lambda}
-
-\item{print.progress}{a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.}
+\item{control}{list of control variables, see 'details'.}
 }
 \value{
 a list with components:
-\item{logL}{a vector of the estimated log-likelihood function after each itereation.}
-\item{par}{a list of list of fitted parameters after each iteration. Within each list, "lambda" is the fitted skewing matrix, "delta" is the location parameter, "Ainv" is the reparameterised scale parameter, "nu" is the degree of freedom.}
-\item{time}{a non-negative numeric vector, records the time elapsed after each iteration.}
+\item{logLik}{a vector recording the estimated log-likelihood after each itereation.}
+\item{par}{a list of list of list of fitted parameters after each iteration.}
+\item{time}{a vectorrecording the time elapsed after each iteration.}
 }
 \description{
 This function finds the maximum likelihood estiamtes for finite mixture of restricted mstil via EM.
 }
+\details{
+The control argument is a list that accepts the following components.
+\describe{
+\item{cvgConR}{tolerance level. The algorithm stops when increase of log-likelihood drops below this level. }
+\item{lambdaPenalty}{L1 penalty coefficient for lambda. By default 0.}
+\item{maxitR}{maximum number of EM iterations. By default 1000.}
+\item{maxitOptimR}{maximum number of iterations in optim within each M-step. By default 1e3.}
+}
+}
 \examples{
 # Not run:
+# data(RiverFlow)
+# fit.fmmstil.r(as.matrix(log(RiverFlow)), 2)
 }
