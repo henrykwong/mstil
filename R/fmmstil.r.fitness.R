@@ -9,22 +9,21 @@
 #' \item{clust}{the estimated group membership.}
 #' @export
 fmmstil.r.fitness <- function(x, param) {
+  k <- ncol(x)
+  n <- nrow(x)
+  
+  .check.fmmstil.r.param(k, param)
+  
   weight <- .fmmstil.r.weight(x, param$omega, param$lambda,param$delta, param$Ainv, param$nu)
   K <- length(param$omega)
-  k <- ncol(x)
   m <- k * ( k + 1) / 2 + 1 + k + k
-  n <- nrow(x)
   logLik <- sum(log(rowSums(weight)))
   weight <- weight / rowSums(weight)
   guess <- apply(weight, 1, which.max)
   nK <- table(guess)
   mK <- m * K + K - 1
-  ICL <- logLik +
-    mK / 2 * log(n) +
-    lgamma(K / 2) + sum(log(apply(weight, 1, max)))
-  sum(lgamma(nK + 0.5)) -
-    K * lgamma(0.5) -
-    lgamma(n + K / 2)
-  if (any(nK < 10) || length(nK) < K) ICL <- -Inf
-  return( list(ICL = ICL, clust = guess, BIC = log(n) * mK - 2 * logLik, AIC <- 2 * mK - 2 * logLik))
+  p <- apply(weight, 1, max)
+  ICL <- ( logLik - log(n) / 2 * mK + sum(log(p)) ) * -2
+  if (any(nK < (k + 1)) || length(nK) < K) ICL <- Inf
+  return( list(ICL = ICL, clust = guess, BIC = log(n) * mK - 2 * logLik, AIC = 2 * mK - 2 * logLik))
 }

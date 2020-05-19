@@ -23,14 +23,14 @@
 #' # nu <- 2
 #' # dmstil(as.matrix(log(RiverFlow)), lambda, delta, Ainv, nu)
 dmstil <- function(x, lambda, delta, Ainv, nu, u, log.p = FALSE, control = list()) {
+  .check.control(control)
   if (!"numLikSample" %in% names(control)) control$numLikSample <- 1e6
   numLikSample <- control$numLikSample
+  
   k <- ncol(x)
+  .check.mstil.param(k, lambda, delta, Ainv, nu)
+  
   if (missing(u)) u <- mvtnorm::rmvt(numLikSample, delta = rep(0, k), sigma = diag(k), df = nu)
-  if (nrow(lambda) != k) stop("number of rows of lambda is not equal to dimension of x!")
-  if (length(delta) != k) stop("length of delta is not equal to dimension of x!")
-  if (ncol(Ainv) != nrow(Ainv) | length(Ainv) != k^2 | any(Ainv[upper.tri(Ainv)] != 0)) stop("Ainv is of wrong size or is not an lower triangular matrix!")
-  if (nu < 0) stop("nu must be positive!")
   
   z <- t((t(x) - delta)) %*% t(Ainv)
   

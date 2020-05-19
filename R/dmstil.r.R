@@ -22,24 +22,8 @@ dmstil.r <- function(x, lambda, delta, Ainv, nu, log.p = FALSE) {
     warning("lambda must be a diagonal matrix!")
     return(rep(NaN, nrow(x)))
   }
+  .check.mstil.r.param(ncol(x), lambda, delta, Ainv, nu)
   k <- ncol(x)
-  if (nrow(lambda) != k) {
-    warning("number of rows of lambda is not equal to dimension of x!")
-    return(rep(NaN, nrow(x)))
-  }
-  if (length(delta) != k) {
-    warning("length of delta is not equal to dimension of x!")
-    return(rep(NaN, nrow(x)))
-  }
-  if (ncol(Ainv) != nrow(Ainv) | length(Ainv) != k^2 | any(Ainv[upper.tri(Ainv)] != 0)) {
-    warning("Ainv is of wrong size or is not an lower triangular matrix!")
-    return(rep(NaN, nrow(x)))
-  }
-  if (nu < 0) {
-    warning("nu must be positive!")
-    return(rep(NaN, nrow(x)))
-  }
-  
   z <- t((t(x) - delta)) %*% t(Ainv)
   Gz <- stats::plogis(z %*% lambda, log.p = TRUE)
   res <- rowSums(Gz) + .dmvt2(x, delta = delta, Ainv = Ainv, nu = nu, log.p = TRUE) + k * log(2)

@@ -34,7 +34,7 @@ This function estimate the value of log likelihood function
 The control argument is a list that accepts the following components.
 \describe{
 \item{numLikSample}{a positive integer, represents the number of samples used to estimate the density and log-likelihood functions. By default 1e6. }
-\item{conLevel}{a value between 0.5 and 1, represents the confidence level of the log-likelihood to be calculated. By default 0.95.}
+\item{conLevel}{a value between 0.5 and 1, represents the 1 sided confidence level of the log-likelihood to be calculated. By default 0.95.}
 }
 }
 \examples{

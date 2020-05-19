@@ -30,13 +30,15 @@
 #' # data(RiverFlow)
 #' # fit.mstil(as.matrix(log(RiverFlow)))
 fit.mstil <- function(x, param, show.progress = TRUE, control = list()) {
+  .check.control(control)
+  
   if (!"maxit" %in% names(control)) control$maxit <- 1e3
   if (!"cvgN" %in% names(control)) control$cvgN <- 5
   if (!"batchSize" %in% names(control)) control$batchSize <- nrow(x)
   maxit <- control$maxit
   cvgN <- control$cvgN
   batchSize <- min(control$batchSize, nrow(x))
-  k <- ncol(x)
+  
   if (missing(param)){
     if (batchSize == nrow(x)) param <- fit.mstil.r(x, control = control)
     else{
@@ -45,17 +47,13 @@ fit.mstil <- function(x, param, show.progress = TRUE, control = list()) {
       param <- initFit$par[[which.max(initFit$logLik)]]
     }
   }
-  if (nrow(param$lambda) != k) stop("lambda is non-conformable!")
-  if (length(param$delta) != k) stop("length of delta is not equal to dimension of x!")
-  if (any(dim(param$Ainv) != k) | any(param$Ainv[upper.tri(param$Ainv)] != 0)) stop("Ainv is non-conformable or is not an lower triangular matrix!")
-  if (param$nu <= 0) stop("nu is non-positive!")
+  .check.mstil.param(ncol(x), param$lambda, param$delta, param$Ainv, param$nu)
   
   res <- list(lambda = param$lambda, delta = param$delta, Ainv = param$Ainv, nu = param$nu)
   startTime <- Sys.time()
   lik <- mstil.logLik(x, res$lambda, res$delta, res$Ainv, res$nu, control = control)
   likRec <- lik$logLik
   likLowerRec <- lik$logLikLower
-  likUpperRec <- lik$logLikUpper
   timeRec <- 0
   resRec <- list()
   resRec[[1]] <- res
@@ -67,8 +65,7 @@ fit.mstil <- function(x, param, show.progress = TRUE, control = list()) {
     lik <- mstil.logLik(x, res$lambda, res$delta, res$Ainv, res$nu, control = control)
     resRec[[i]] <- res
     likRec <- c(likRec, lik$logLik)
-    likLowerRec <- c(likLowerRec, lik$logLikLower)
-    likUpperRec <- c(likUpperRec, lik$logLikUpper)
+    likLowerRec <- c(likLowerRec, lik$logLikLowerBound)
     timeRec <- c(timeRec, as.numeric(Sys.time() - startTime, units = "secs"))
     if (show.progress) {
       cat("\r", "Iteration : ", (i - 1), "Current Likelihood : ", round(likRec[length(likRec)]), "Maximum Likelihood : ", round(max(likRec)), "\t")
@@ -76,11 +73,11 @@ fit.mstil <- function(x, param, show.progress = TRUE, control = list()) {
     if (i > cvgN) {
       if (all(likRec[i - cvgN] > likRec[(i - cvgN + 1):i])) {
         if (show.progress) cat("\n", "Converged!")
-        return(list(logLik = likRec, par = resRec, logLikLower = likLowerRec, logLikUpper = likUpperRec, time = timeRec))
+        return(list(logLik = likRec, par = resRec, logLikLower = likLowerRec, time = timeRec))
         break
       }
     }
   }
   if (show.progress) cat("\n", "Maximum number of iterations reached!")
-  return(list(logLik = likRec, par = resRec, logLik_lower = likLowerRec, logLik_upper = likUpperRec, time = timeRec))
+  return(list(logLik = likRec, par = resRec, logLikLowerBound = likLowerRec, time = timeRec))
 }

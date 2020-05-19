@@ -22,36 +22,19 @@
 #' # data(RiverFlow)
 #' # fit.mstil.r.batch(as.matrix(log(RiverFlow)), control = list(batchSizeR = 100))
 fit.mstil.r.batch <- function(x, param, show.progress = TRUE, control = list()) {
-  if (!"maxitR" %in% names(control)) control$maxitR <- 1e2
+  .check.control(control)
+  if (!"maxitR" %in% names(control)) control$maxitR <- 1e3
   if (!"cvgNR" %in% names(control)) control$cvgNR <- 5
   if (!"batchSizeR" %in% names(control)) control$batchSizeR <- nrow(x)
   if (!"cvgTolR" %in% names(control)) control$cvgTolR <- 1e-2
-  
   maxitR <- control$maxitR
   cvgNR <- control$cvgNR
   cvgTolR <- control$cvgTolR
-  k <- ncol(x)
-  n <- nrow(x)
-  batchSizeR <- min(n, control$batchSizeR)
-
-  if (missing(param)) {
-    param <- list(
-      lambda = 0 * diag(stats::runif(k, -0.1, 0.1)),
-      delta = colMeans(x),
-      Ainv = tryCatch(t(solve(chol(stats::cov(x)))),
-                      error = function(e) 1 / sqrt(stats::cov(x)),
-                      warning = function(w) 1 / sqrt(stats::cov(x))
-      ),
-      nu = 10
-    )
-    param$Ainv[upper.tri(param$Ainv, diag = FALSE)] <- 0
-  }
-  if (any((param$lambda * diag(k)) != param$lambda)) stop("lambda is not a diagonal matrix!")
-  if (nrow(param$lambda) != k) stop("lambda is non-conformable!")
-  if (length(param$delta) != k) stop("length of delta is not equal to dimension of x!")
-  if (any(dim(param$Ainv) != k) | any(param$Ainv[upper.tri(param$Ainv)] != 0)) stop("Ainv is non-conformable or is not an lower triangular matrix!")
-  if (param$nu <= 0) stop("nu is non-positive!")
   
+  batchSizeR <- min(nrow(x), control$batchSizeR)
+
+  if (missing(param)) param <- .default.init.param.method.t(x)
+  .check.mstil.r.param(ncol(x), param$lambda, param$delta, param$Ainv, param$nu)
   
   res <- list(lambda = param$lambda, delta = param$delta, Ainv = param$Ainv, nu = param$nu)
   
@@ -65,7 +48,7 @@ fit.mstil.r.batch <- function(x, param, show.progress = TRUE, control = list()) 
   
   
   for (i in 2:(maxitR + 1)) {
-    xBatch <- x[sample(n, batchSizeR),]
+    xBatch <- x[sample(nrow(x), batchSizeR),]
     res <- fit.mstil.r(xBatch, res, control = control)
     lik <- sum(dmstil.r(x, res$lambda, res$delta, res$Ainv, res$nu, log.p = TRUE))
     resRec[[i]] <- res

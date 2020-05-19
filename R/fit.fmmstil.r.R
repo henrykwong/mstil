@@ -25,6 +25,7 @@
 #' # data(RiverFlow)
 #' # fit.fmmstil.r(as.matrix(log(RiverFlow)), 2)
 fit.fmmstil.r <- function(x, K, param, init.cluster, init.param.method, show.progress = TRUE, control = list()) {
+  .check.control(control)
   if (!"maxitR" %in% names(control)) control$maxitR <- 1e3
   if (!"cvgTolR" %in% names(control)) control$cvgTolR <- 1e-2
   if (!"cvgNR" %in% names(control)) control$cvgNR <- 5
@@ -32,15 +33,17 @@ fit.fmmstil.r <- function(x, K, param, init.cluster, init.param.method, show.pro
   maxitR <- control$maxitR
   cvgNR <- control$cvgNR
   cvgTolR <- control$cvgTolR
+
   n <- nrow(x)
-  k <- ncol(x)
-  res <- list()
-  batchSizeR <- min(n, control$batchSizeR)
+  
+  batchSizeR <- min(nrow(x), control$batchSizeR)
+  
+  identicalSamples <- max(table(factor((unique(data.frame(t(x)))))))
   
   if (missing(param)) {
     param <- list(omega = list(), lambda = list(), delta = list(), Ainv = list(), nu = list())
-    if (missing(init.param.method)) init.param.method <- .default.init.param.method
-    if (missing(init.cluster)) init.cluster <- .default.init.cluster.method(x, K)
+    if (missing(init.param.method)) init.param.method <- .default.init.param.method.random
+    if (missing(init.cluster)) init.cluster <- .default.init.cluster.method.random(x, K)
     param$omega <- as.list(table(init.cluster) / n)
     for (i in 1:K) {
       initFit <- init.param.method(x[which(init.cluster == unique(init.cluster)[i]), ])
@@ -50,6 +53,8 @@ fit.fmmstil.r <- function(x, K, param, init.cluster, init.param.method, show.pro
       param$nu[[i]] <- initFit$nu
     }
   }
+  
+  .check.fmmstil.r.param(ncol(x), param)
   
   res <- list(omega = param$omega, lambda = param$lambda, delta = param$delta, Ainv = param$Ainv, nu = param$nu)
   startTime <- Sys.time()
@@ -65,7 +70,6 @@ fit.fmmstil.r <- function(x, K, param, init.cluster, init.param.method, show.pro
     likRec <- c(likRec, logLik)
     resRec[[i]] <- res
     timeRec <- c(timeRec, difftime(Sys.time(), startTime, units = "secs"))
-    
     if (i > cvgNR) {
       if (all((likRec[i - cvgNR] + cvgTolR) > likRec[(i - cvgNR + 1):i])) {
         if (show.progress) cat("\n", "Converged!")
@@ -74,11 +78,18 @@ fit.fmmstil.r <- function(x, K, param, init.cluster, init.param.method, show.pro
       }
     }
     
+    if (any(colSums(w) < (identicalSamples + 1))){
+      if (show.progress) cat("\n", "Approaching singularity!")
+      return(list(logLik = likRec, par = resRec, time = timeRec))
+      break
+    }
+    
     
     
     if (show.progress) {
       cat("\r", "Iteration : ", i, "Current Likelihood : ", round(likRec[length(likRec)]), "Maximum Likelihood : ", round(max(likRec)), "\t")
     }
+    
     for (j in 1:K) {
       batch <- sample(nrow(x),batchSizeR)
       res1 <- .fit.fmmstil.r.weighted(x[batch,], w[batch, j], lambda = res$lambda[[j]], delta = res$delta[[j]], Ainv = res$Ainv[[j]], nu = res$nu[[j]], control = control)

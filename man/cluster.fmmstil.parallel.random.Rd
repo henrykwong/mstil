@@ -8,6 +8,7 @@ cluster.fmmstil.parallel.random(
   x,
   ncore = 1,
   numTrial.fun,
+  criteria = c("ICL", "BIC", "AIC"),
   init.cluster.method,
   init.param.method,
   show.progress = TRUE,
@@ -20,6 +21,8 @@ cluster.fmmstil.parallel.random(
 \item{ncore}{a positive integer, represents the number of cpu threads to be used in parallel. By default 1.}
 
 \item{numTrial.fun}{a function of K that returns the number of trials to be evaluated.}
+
+\item{criteria}{Either 'ICL', 'BIC', or 'AIC'. Represents the type of information criteria used for model selection. By default 'ICL'.}
 
 \item{init.cluster.method}{a function of x, K that seperates x into K initial clusters.}
 

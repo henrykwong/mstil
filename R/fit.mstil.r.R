@@ -19,36 +19,24 @@
 #' # data(RiverFlow)
 #' # fit.mstil.r(as.matrix(log(RiverFlow)))
 fit.mstil.r <- function(x, param, control = list()) {
+  
+  .check.control(control)
+  
   if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 0
   if (!"maxitOptimR" %in% names(control)) control$maxitOptimR <- 1e3
+  if (!"ainvPenalty" %in% names(control)) control$ainvPenalty <- 0
+  ainvPenalty <- control$ainvPenalty
   lambdaPenalty <- control$lambdaPenalty
   maxitOptimR <- control$maxitOptimR
   k <- ncol(x)
-  n <- nrow(x)
   
-  if (missing(param)) {
-    param <- list(
-      lambda = 0 * diag(stats::runif(k, -0.1, 0.1)),
-      delta = colMeans(x),
-      Ainv = tryCatch(t(solve(chol(stats::cov(x)))),
-                      error = function(e) 1 / sqrt(stats::cov(x)),
-                      warning = function(w) 1 / sqrt(stats::cov(x))
-      ),
-      nu = 10
-    )
-    param$Ainv[upper.tri(param$Ainv, diag = FALSE)] <- 0
-  }
+  if (missing(param)) param <- .default.init.param.method.t(x)
+  .check.mstil.r.param(k, param$lambda, param$delta, param$Ainv, param$nu)
   
   lambda <- param$lambda
   delta <- param$delta
   Ainv <- param$Ainv
   nu <- param$nu
-  
-  if (any((lambda * diag(k)) != lambda)) stop("lambda is not a diagonal matrix!")
-  if (nrow(lambda) != k) stop("lambda is non-conformable!")
-  if (length(delta) != k) stop("length of delta is not equal to dimension of x!")
-  if (any(dim(Ainv) != k) | any(Ainv[upper.tri(Ainv)] != 0)) stop("Ainv is non-conformable or is not an lower triangular matrix!")
-  if (nu <= 0) stop("nu is non-positive!")
   
   lik <- function(param) {
     lambda <- diag(param[1:k])
@@ -57,7 +45,7 @@ fit.mstil.r <- function(x, param, control = list()) {
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
     lnu <- param[length(param)]
     nu <- exp(lnu)
-    res <- sum(dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE)) - lambdaPenalty * sum(abs(lambda))
+    res <- sum(dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE)) - lambdaPenalty * sum(abs(lambda)) - lambdaPenalty * sum(abs(lambda)) - ainvPenalty * sum(Ainv ^ 2)
     return(res)
   }
   grad <- function(param) {
@@ -69,6 +57,7 @@ fit.mstil.r <- function(x, param, control = list()) {
     nu <- exp(lnu)
     grad <- .mstil.r.grad(x, lambda, delta, Ainv, nu)
     grad$dlambda <- grad$dlambda - lambdaPenalty * sign(lambda)
+    grad$dAinv <- grad$dAinv - 2 * ainvPenalty * Ainv
     gr <- c(diag(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)], grad$dlnu)
     
     return(gr)

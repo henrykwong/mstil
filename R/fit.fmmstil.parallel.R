@@ -32,6 +32,7 @@
 #' # data(RiverFlow)
 #' # fit.fmmstil(as.matrix(log(RiverFlow)), 2)
 fit.fmmstil.parallel <- function(x, K, ncore = 1, param, init.cluster, init.param.method, show.progress = TRUE, control = list()) {
+  .check.control(control)
   if (!"maxit" %in% names(control)) control$maxit <- 1e3
   if (!"cvgN" %in% names(control)) control$cvgN <- 5
   if (!"batchSize" %in% names(control)) control$batchSize <- nrow(x)
@@ -44,13 +45,13 @@ fit.fmmstil.parallel <- function(x, K, ncore = 1, param, init.cluster, init.para
   maxit <- control$maxit
   cvgN <- control$cvgN
   batchSize <- min(control$batchSize, nrow(x))
+  
   n <- nrow(x)
-  k <- ncol(x)
-  res <- list()
+  
   if (missing(param)) {
     param <- list(omega = list(), lambda = list(), delta = list(), Ainv = list(), nu = list())
-    if (missing(init.param.method)) init.param.method <- .default.init.param.method
-    if (missing(init.cluster)) init.cluster <- .default.init.cluster.method(x, K)
+    if (missing(init.param.method)) init.param.method <- .default.init.param.method.random
+    if (missing(init.cluster)) init.cluster <- .default.init.cluster.method.random(x, K)
     param$omega <- as.list(table(init.cluster) / n)
     for (i in 1:K) {
       initFit <- init.param.method(x[which(init.cluster == unique(init.cluster)[i]), ])
@@ -60,6 +61,8 @@ fit.fmmstil.parallel <- function(x, K, ncore = 1, param, init.cluster, init.para
       param$nu[[i]] <- initFit$nu
     }
   }
+  .check.fmmstil.param(ncol(x), param)
+  
   res <- list(omega = param$omega, lambda = param$lambda, delta = param$delta, Ainv = param$Ainv, nu = param$nu)
   
   startTime <- Sys.time()

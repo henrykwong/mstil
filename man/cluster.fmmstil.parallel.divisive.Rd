@@ -7,6 +7,7 @@
 cluster.fmmstil.parallel.divisive(
   x,
   ncore = 1,
+  criteria = c("ICL", "BIC", "AIC"),
   init.cluster.method,
   init.param.method,
   show.progress = TRUE,
@@ -17,6 +18,8 @@ cluster.fmmstil.parallel.divisive(
 \item{x}{matrix of quantiles of size n x k. Each row is taken as a quantile.}
 
 \item{ncore}{a positive integer, represents the number of cpu threads to be used in parallel. By default 1.}
+
+\item{criteria}{Either 'ICL', 'BIC', or 'AIC'. Represents the type of information criteria used for model selection. By default 'ICL'.}
 
 \item{init.cluster.method}{a function of x, K that seperates x into K initial clusters.}
 

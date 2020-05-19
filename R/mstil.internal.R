@@ -46,14 +46,18 @@
 
   t1 <- matrix(rep(1:k, k), nrow = k)[lower.tri(diag(k), diag = TRUE)]
   t2 <- rep(1:k, k:1)
+  
   grad <- matrix(0, nrow = k, ncol = k)
   grad_ <- colSums(2 / nu * (y[, t2] * t(xA)[, t1]) * C)
   grad[lower.tri(grad, diag = TRUE)] <- grad_
   grad <- -(nu + k) / 2 * grad + n * diag(1 / diag(Ainv))
+  
   dAinv1 <- grad
   dAinv2 <- t(t(matrix(colSums(y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
+  
   dmu1 <- rowSums(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C)))
   dmu2 <- as.vector(-(t(colSums(gGz)) %*% (t(lambda) %*% Ainv)))
+  
   dlambda1 <- matrix(colSums(gGz[, rep(1:p, each = k)] * t(xA[rep(1:k, p), ])), nrow = k)
   dlambda2 <- matrix(colSums(expGu * gGu[, rep(1:p, each = k)] * u[, rep(1:k, p)]), nrow = k) / m / EGu
 
@@ -69,11 +73,12 @@
   if (!"numGradSample" %in% names(control)) control$numGradSample <- 1e4
   if (!"maxitOptim" %in% names(control)) control$maxitOptim <- 10
   if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 0
-
+  if (!"ainvPenalty" %in% names(control)) control$ainvPenalty <- 0
+  ainvPenalty <- control$ainvPenalty
   numGradSample <- control$numGradSample
   maxitOptim <- control$maxitOptim
   lambdaPenalty <- control$lambdaPenalty
-
+  
 
   p <- ncol(lambda)
   k <- ncol(x)
@@ -85,7 +90,7 @@
     delta <- param[1:k + (p * k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
-    return(sum(dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - lambdaPenalty * sum(abs(lambda)))
+    return(sum(dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - lambdaPenalty * sum(abs(lambda)) - ainvPenalty * sum(Ainv ^ 2) )
   }
   grad <- function(param) {
     lambda <- matrix(param[1:(p * k)], nrow = k)
@@ -94,6 +99,7 @@
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
     grad <- .mstil.grad.1(x, lambda, delta, Ainv, nu, u)
     grad$dlambda <- grad$dlambda - lambdaPenalty * sign(lambda)
+    grad$dAinv <- grad$dAinv - 2 * ainvPenalty * Ainv
     gr <- c(as.vector(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)])
     return(gr)
   }
@@ -216,15 +222,18 @@
 
   t1 <- matrix(rep(1:k, k), nrow = k)[lower.tri(diag(k), diag = TRUE)]
   t2 <- rep(1:k, k:1)
+  
   grad <- matrix(0, nrow = k, ncol = k)
   grad_ <- colSums(w * (2 / nu * (y[, t2] * t(xA)[, t1]) * C))
   grad[lower.tri(grad, diag = TRUE)] <- grad_
   grad <- -(nu + k) / 2 * grad + sum(w) * diag(1 / diag(Ainv))
+  
   dAinv1 <- grad
   dAinv2 <- t(t(matrix(colSums(w * y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
 
   dmu1 <- colSums(w * t(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C))))
   dmu2 <- as.vector(-(t(colSums(w * gGz)) %*% (t(lambda) %*% Ainv)))
+  
   dlambda1 <- matrix(colSums(w * gGz[, rep(1:p, each = k)] * t(xA[rep(1:k, p), ])), nrow = k)
   dlambda2 <- matrix(colSums(expGu * gGu[, rep(1:p, each = k)] * u[, rep(1:k, p)]), nrow = k) / m / EGu
 
@@ -238,9 +247,10 @@
 #' @keywords internal
 .fit.mstil.1.weighted <- function(x, w, lambda, delta, Ainv, nu, control = list()) {
   if (!"numGradSample" %in% names(control)) control$numGradSample <- 1e4
-  if (!"maxitOptim" %in% names(control)) control$maxitOptim <- 10
-  if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 0
-
+  if (!"maxitOptim" %in% names(control)) control$maxitOptim <- 1e1
+  if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 1e-2
+  if (!"ainvPenalty" %in% names(control)) control$ainvPenalty <- 1e-2
+  ainvPenalty <- control$ainvPenalty
 
   numGradSample <- control$numGradSample
   maxitOptim <- control$maxitOptim
@@ -255,7 +265,7 @@
     delta <- param[1:k + (p * k)]
     Ainv <- matrix(0, nrow = k, ncol = k)
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
-    val <- sum(w * dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - lambdaPenalty * sum(abs(lambda))
+    val <- sum(w * dmstil(x, lambda, delta, Ainv, nu, u, log.p = TRUE)) - lambdaPenalty * sum(abs(lambda)) - lambdaPenalty * sum(abs(lambda)) - ainvPenalty * sum(Ainv ^ 2)
     return(val)
   }
   grad <- function(param) {
@@ -265,6 +275,7 @@
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + (p * k) + 1):length(param)]
     grad <- .mstil.grad.1.weighted(x, w, lambda, delta, Ainv, nu, u)
     grad$dlambda <- grad$dlambda - lambdaPenalty * sign(lambda)
+    grad$dAinv <- grad$dAinv - 2 * ainvPenalty * Ainv
     gr <- c(as.vector(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)])
     return(gr)
   }
@@ -305,8 +316,10 @@
   grad <- -(nu + k) / 2 * grad + n * diag(1 / diag(Ainv))
   dAinv1 <- grad
   dAinv2 <- t(t(matrix(colSums(y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
+  
   dmu1 <- rowSums(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C)))
   dmu2 <- as.vector(-(t(colSums(gGz)) %*% (t(lambda) %*% Ainv)))
+  
   dlambda1 <- diag(colSums(gGz * t(xA)))
   dnu1 <- sum((digamma((nu + k) / 2) - digamma(nu / 2)) / 2 - k / 2 / nu - 0.5 * (log1p(xSx / nu) + (nu + k) / (1 + xSx / nu) * xSx * (-1) / nu^2))
   dlambda <- dlambda1
@@ -335,17 +348,22 @@
 
   t1 <- matrix(rep(1:k, k), nrow = k)[lower.tri(diag(k), diag = TRUE)]
   t2 <- rep(1:k, k:1)
+  
   grad <- matrix(0, nrow = k, ncol = k)
   grad_ <- colSums(w * 2 / nu * (y[, t2] * t(xA)[, t1]) * C)
   grad[lower.tri(grad, diag = TRUE)] <- grad_
   grad <- -(nu + k) / 2 * grad + sum(w) * diag(1 / diag(Ainv))
+  
   dAinv1 <- grad
   dAinv2 <- t(t(matrix(colSums(w * y[, rep(1:k, each = p)] * gGz[, rep(1:p, k)]), nrow = p)) %*% t(lambda)) * lower.tri(diag(k), diag = TRUE)
 
   dmu1 <- colSums(w * t(-(nu + k) / 2 / nu * (-2) * (crossprod(Ainv) %*% t(y * C))))
   dmu2 <- as.vector(-(t(colSums(w * gGz)) %*% (t(lambda) %*% Ainv)))
+  
   dlambda1 <- diag(colSums(w * gGz * t(xA)))
+  
   dnu1 <- sum(w * ((digamma((nu + k) / 2) - digamma(nu / 2)) / 2 - k / 2 / nu - 0.5 * (log1p(xSx / nu) + (nu + k) / (1 + xSx / nu) * xSx * (-1) / nu^2)))
+  
   dlambda <- dlambda1
   dmu <- dmu1 + dmu2
   dAinv <- dAinv1 + dAinv2
@@ -356,9 +374,10 @@
 
 #' @keywords internal
 .fit.fmmstil.r.weighted <- function(x, w, lambda, delta, Ainv, nu, control = list()) {
-  if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 0
+  if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 1e-2
   if (!"maxitOptimR" %in% names(control)) control$maxitOptimR <- 1e2
-
+  if (!"ainvPenalty" %in% names(control)) control$ainvPenalty <- 1e-2
+  ainvPenalty <- control$ainvPenalty
   maxitOptimR <- control$maxitOptimR
   lambdaPenalty <- control$lambdaPenalty
 
@@ -371,7 +390,7 @@
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
     lnu <- param[length(param)]
     nu <- exp(lnu)
-    res <- sum(w * dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE) - lambdaPenalty * sum(abs(lambda)))
+    res <- sum(w * dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE)) - lambdaPenalty * sum(abs(lambda)) - lambdaPenalty * sum(abs(lambda)) - ainvPenalty * sum(Ainv ^ 2)
     return(res)
   }
   grad <- function(param) {
@@ -383,6 +402,7 @@
     nu <- exp(lnu)
     grad <- .mstil.r.grad.weighted(x, w, lambda, delta, Ainv, nu)
     grad$dlambda <- grad$dlambda - lambdaPenalty * sign(lambda)
+    grad$dAinv <- grad$dAinv - 2 * ainvPenalty * Ainv
     gr <- c(diag(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)], grad$dlnu)
     return(gr)
   }
@@ -434,22 +454,23 @@
 }
 
 #' @keywords internal
-.default.init.param.method <- function(x) {
+.default.init.param.method.random <- function(x) {
   param <- list(
     lambda = diag(stats::runif(ncol(x), -0.5, 0.5)),
     delta = x[sample(nrow(x), 1), ],
     Ainv = tryCatch(t(solve(chol(stats::cov(x)))),
-      error = function(e) 1 / sqrt(stats::cov(x)),
-      warning = function(w) 1 / sqrt(stats::cov(x))
-    ),
+                    error = function(e) diag(1 / sqrt(diag(stats::cov(x) * diag(ncol(x))))),
+                    warning = function(w) diag(1 / sqrt(diag(stats::cov(x) * diag(ncol(x)))))
+                    ),
     nu = 10
   )
-
+  param$Ainv[which(is.infinite(param$Ainv))] <- 10000
+  param$Ainv[upper.tri(param$Ainv, diag = FALSE)] <- 0
   return(param)
 }
 
 #' @keywords internal
-.default.init.cluster.method <- function(x, K) {
+.default.init.cluster.method.random <- function(x, K) {
   prob <- stats::runif(K) + 1
   prob <- prob / sum(prob)
   init.cluster <- sample(K, nrow(x), replace = TRUE, prob = prob)
@@ -457,33 +478,37 @@
 }
 
 #' @keywords internal
-.default.init.param.method2 <- function(x) {
+.default.init.param.method.t <- function(x) {
   param <- list(
-    lambda = diag(stats::runif(ncol(x), -0.5, 0.5)),
+    lambda = diag(ncol(x)) * 0,
     delta = colMeans(x),
     Ainv = tryCatch(t(solve(chol(stats::cov(x)))),
-                    error = function(e) 1 / sqrt(stats::cov(x)),
-                    warning = function(w) 1 / sqrt(stats::cov(x))),
+                    error = function(e) diag(1 / sqrt(diag(stats::cov(x) * diag(ncol(x))))),
+                    warning = function(w) 1 / diag(1 / sqrt(diag(stats::cov(x) * diag(ncol(x)))))
+                    ),
     nu = 10
   )
+  param$Ainv[which(is.infinite(param$Ainv))] <- 10000
+  param$Ainv[upper.tri(param$Ainv, diag = FALSE)] <- 0
   return(param)
 }
 
 #' @keywords internal
-.default.init.cluster.method2 <- function(x, K) {
+.default.init.cluster.method.kmeans <- function(x, K) {
   return(stats::kmeans(x, K)$cluster)
 }
 
 #' @keywords internal
-.cluster.fmmstil.K.parallel.divisive <- function(x, K, ncore = 1, cluster0, init.cluster.method, init.param.method, show.progress = TRUE, control = list()) {
+.cluster.fmmstil.K.parallel.divisive <- function(x, K, ncore = 1, cluster0, criteria = c('ICL', 'BIC', 'AIC'), init.cluster.method, init.param.method, show.progress = TRUE, control = list()) {
   if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 1e-2
   if (!"cvgTolR" %in% names(control)) control$cvgTolR <- 1e-1
   if (ncore > parallel::detectCores()) {
     ncore <- parallel::detectCores()
     warning("Not enough available core")
   }
-  if (missing(init.cluster.method)) init.cluster.method <- .default.init.cluster.method2
-  if (missing(init.param.method)) init.param.method <- .default.init.param.method2
+  if (missing(init.cluster.method)) init.cluster.method <- .default.init.cluster.method.kmeans
+  if (missing(init.param.method)) init.param.method <- .default.init.param.method.t
+  if (missing(criteria)) criteria <- 'ICL'
   
   if (show.progress) cat("\n", "MSTIL.R", "\t", "K : ", K, "\t", "Number of Trials : ", K - 1)
   seedFmmstil <- sample(.Machine$integer.max, 1)
@@ -509,7 +534,7 @@
       initParamList[[trial]]$nu[[kk]] = initFit$nu
     }
   }
-  
+
   
   fit.fmmstil.r.seed.windows <- function(trial, data, K, initParamList, control = list()){
     init.cluster = init.cluster.method(data,K)
@@ -531,19 +556,21 @@
   set.seed(seedFmmstil)
   
   
-  ICLRec <- c()
-  for (i in 1:(K-1)) ICLRec <- c(ICLRec, resRec[[i]]$ICL)
-  res1Best <- resRec[[which.max(ICLRec)]]
+  criteriaRec <- c()
+  for (i in 1:(K-1)) criteriaRec <- c(criteriaRec, resRec[[i]][[criteria]])
+  res1Best <- resRec[[which.min(criteriaRec)]]
   par <- res1Best$par[[which.max(res1Best$logLik)]]
   
-  if (show.progress) cat("\t", "Max ICL : ", (round(max(ICLRec), 2)))
+  if (show.progress) cat("\t", "Min. ", criteria, " : ", (round(min(criteriaRec), 2)))
   
-  
+  resres <<- res1Best
   if (show.progress) cat("\n", "MSTIL  ", "\t", "K : ", K, "\t")
-  res2Best <- tryCatch(fit.fmmstil.parallel(x, K, ncore = ncore, param = par, show.progress = FALSE, control = control),
-                       error = function(e) res1Best,
-                       warning = function(w) res1Best
-  )
+  # res2Best <- tryCatch(fit.fmmstil.parallel(x, K, ncore = ncore, param = par, show.progress = FALSE, control = control),
+  #                      error = function(e) res1Best,
+  #                      warning = function(w) res1Best
+  # )
+  res2Best <- fit.fmmstil.parallel(x, K, ncore = ncore, param = par, show.progress = FALSE, control = control)
+  
   
   par <- res2Best$par[[which.max(res2Best$logLik)]]
   fitness2 <- fmmstil.fitness(x, par)
@@ -552,11 +579,77 @@
   res2Best$AIC <- fitness2$AIC
   res2Best$BIC <- fitness2$BIC
 
-  if (show.progress) cat("\t", "Max ICL : ", (round(max(ICLRec, res2Best$ICL), 2)))
+  if (show.progress) cat("\t", "Min. ", criteria, " : ", (round(min(criteriaRec, res2Best[[criteria]]), 2)))
 
   
   return(list(restricted = res1Best, unrestricted = res2Best, recordR = resRec))
 }
 
+#' @keywords internal
+.check.control <- function(control){
+  controlNames <- c('numGradSample',
+                    'numLikSample',
+                    'lambdaPenalty',
+                    'ainvPenalty',
+                    'batchSize',
+                    'maxit',
+                    'maxitOptim',
+                    'cvgN',
+                    'finDiffStep',
+                    'StepSgd',
+                    'iterSgd',
+                    'dimRateSgd',
+                    'conLevel',
+                    'batchSizeR',
+                    'maxitR',
+                    'maxitOptimR',
+                    'cvgNR',
+                    'cvgTolR')
+  if (!all(names(control) %in% controlNames)){
+    unknownNames <- names(control)[which(!(names(control) %in% controlNames))]
+    for (name in unknownNames){
+      warning(paste(name, 'is not a recognised control arguments !'))
+    }
+  }
+  
+  for (name in names(control)[which(names(control) %in% controlNames)]){
+    if (control[[name]] < 0) warning(paste(name, 'must be positive !'))
+    if (name == 'conLevel'){
+      if (control[['conLevel']] < 0.5 | control[['conLevel']] > 1) warning('conLevel must be between 0.5 and 1 !')
+    }
+  }
+}
 
+#' @keywords internal
+.check.mstil.r.param <- function(k, lambda, delta, Ainv, nu){
+  if (nrow(lambda) != k) warning("lambda is non-conformable!")
+  if (!all(diag(diag(lambda)) == lambda)) warning("lambda is not diagonal!")
+  if (length(delta) != k) warning("length of delta is not equal to dimension of x!")
+  if (ncol(Ainv) != nrow(Ainv) | length(Ainv) != k^2 | any(Ainv[upper.tri(Ainv)] != 0)) warning("Ainv is non-conformatble or is not an lower triangular matrix!")
+  if (nu < 0) stop("nu is negative!")
+}
+
+#' @keywords internal
+.check.mstil.param <- function(k, lambda, delta, Ainv, nu){
+  if (nrow(lambda) != k) warning("lambda is non-conformable!")
+  if (length(delta) != k) warning("length of delta is not equal to dimension of x!")
+  if (ncol(Ainv) != nrow(Ainv) | length(Ainv) != k^2 | any(Ainv[upper.tri(Ainv)] != 0)) warning("Ainv is non-conformatble or is not an lower triangular matrix!")
+  if (nu < 0) warning("nu is negative!")
+}
+
+#' @keywords internal
+.check.fmmstil.param <- function(k, param){
+  if (sum(unlist(param$omega)) != 1) warning('omega must sums to 1 !')
+  for (i in 1:length(param$omega)){
+    .check.mstil.param(k, param$lambda[[i]], param$delta[[i]], param$Ainv[[i]], param$nu[[i]])
+  }
+}
+
+#' @keywords internal
+.check.fmmstil.r.param <- function(k, param){
+  if (sum(unlist(param$omega)) != 1) warning('omega must sums to 1 !')
+  for (i in 1:length(param$omega)){
+    .check.mstil.r.param(k, param$lambda[[i]], param$delta[[i]], param$Ainv[[i]], param$nu[[i]])
+  }
+}
 
