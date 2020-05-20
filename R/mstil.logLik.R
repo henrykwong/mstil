@@ -26,6 +26,8 @@
 #' # nu <- 2
 #' # mstil.logLik(as.matrix(log(RiverFlow)), lambda, delta, Ainv, nu)
 mstil.logLik <- function(x, lambda, delta, Ainv, nu, u, control = list()) {
+  n <- nrow(x)
+  k <- ncol(x)
   .check.control(control)
   .check.mstil.param(k, lambda, delta, Ainv, nu)
   
@@ -34,8 +36,7 @@ mstil.logLik <- function(x, lambda, delta, Ainv, nu, u, control = list()) {
   numLikSample <- control$numLikSample
   conLevel <- control$conLevel
   
-  n <- nrow(x)
-  k <- ncol(x)
+
   
   if (missing(u)) u <- mvtnorm::rmvt(numLikSample, delta = rep(0, k), sigma = diag(k), df = nu)
   

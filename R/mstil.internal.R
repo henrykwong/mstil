@@ -561,7 +561,6 @@
   res1Best <- resRec[[which.min(criteriaRec)]]
   par <- res1Best$par[[which.max(res1Best$logLik)]]
   
-  resglobal <<- res1Best
   
   if (show.progress) cat("\t", "Min. ", criteria, " : ", (round(min(criteriaRec), 2)))
   
@@ -570,7 +569,7 @@
   
   
   par <- res2Best$par[[which.max(res2Best$logLik)]]
-  fitness2 <- fmmstil.fitness(x, par)
+  fitness2 <- fmmstil.fitness(x, par, control = control)
   res2Best$ICL <- fitness2$ICL
   res2Best$clust <- fitness2$clust
   res2Best$AIC <- fitness2$AIC
@@ -636,7 +635,7 @@
 
 #' @keywords internal
 .check.fmmstil.param <- function(k, param){
-  if (sum(unlist(param$omega)) != 1) warning('omega must sums to 1 !')
+  if (abs(sum(unlist(param$omega)) - 1) > 1e-5) warning('omega must sums to 1 !')
   for (i in 1:length(param$omega)){
     .check.mstil.param(k, param$lambda[[i]], param$delta[[i]], param$Ainv[[i]], param$nu[[i]])
   }
@@ -644,7 +643,7 @@
 
 #' @keywords internal
 .check.fmmstil.r.param <- function(k, param){
-  if (sum(unlist(param$omega)) != 1) warning('omega must sums to 1 !')
+  if (abs(sum(unlist(param$omega)) - 1) > 1e-5) warning('omega must sums to 1 !')
   for (i in 1:length(param$omega)){
     .check.mstil.r.param(k, param$lambda[[i]], param$delta[[i]], param$Ainv[[i]], param$nu[[i]])
   }

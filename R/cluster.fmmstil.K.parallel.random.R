@@ -78,7 +78,7 @@ cluster.fmmstil.K.parallel.random <- function(x, K, ncore = 1, numTrial = 1, cri
   res2Best <- fit.fmmstil.parallel(x, K, ncore = ncore, param = par, show.progress = FALSE, control = control)
   
   par <- res2Best$par[[which.max(res2Best$logLik)]]
-  fitness2 <- fmmstil.fitness(x, par)
+  fitness2 <- fmmstil.fitness(x, par, control = control)
   res2Best$ICL <- fitness2$ICL
   res2Best$clust <- fitness2$clust
   res2Best$AIC <- fitness2$AIC
