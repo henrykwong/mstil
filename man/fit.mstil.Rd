@@ -33,7 +33,8 @@ The control argument is a list that accepts the following components.
 \item{conLevel}{a value between 0.5 and 1, represents the confidence level of the log-likelihood to be calculated. By default 0.95.}
 \item{cvgN}{a positive interger. The algorithm stops when the estimated log-likelihood is not improved in cvgN iterations. By default 5.}
 \item{lambdaPenalty}{a positive value, represents the L1 penalty coefficient for lambda. By default 0.}
-\item{maxit}{a positive integer, represents the maximum number iterations allowed. By default 1e3.}
+\item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 1e-6.}
+\item{maxit}{a positive integer, represents the maximum number iterations allowed. By default 0.}
 \item{maxitOptim}{maximum number of iterations in optim. By default 10.}
 \item{numGradSample}{a positive integer, represents the number of samples used to estimate the gradient. By default 1e4.}
 \item{finDiffStep}{a positive value, represents the step size used to estimate gradient w.r.t. nu. By default 1e-5.}

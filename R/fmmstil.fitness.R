@@ -32,5 +32,5 @@ fmmstil.fitness <- function(x, param, u, control = list()) {
   p <- apply(weight, 1, max)
   ICL <- ( logLik - log(n) / 2 * mK + sum(log(p)) ) * -2
   if (any(nK < (k + 1)) || length(nK) < K) ICL <- Inf
-  return( list(ICL = ICL, clust = guess, BIC = log(n) * mK - 2 * logLik, AIC = 2 * mK - 2 * logLik))
+  return( list(logLik = logLik, ICL = ICL, clust = guess, BIC = log(n) * mK - 2 * logLik, AIC = 2 * mK - 2 * logLik))
 }

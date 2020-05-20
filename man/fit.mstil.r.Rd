@@ -15,6 +15,7 @@ fit.mstil.r(x, param, control = list())
 #@details The control argument is a list that accepts the following components.
 \describe{
 \item{lambdaPenalty}{a positive value, represents the L1 penalty coefficient for lambda. By default 0.}
+\item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 0.}
 \item{maxitOptimR}{a positive integer, represents the maximum number of iterations allowed in optim. By default 1e3.}
 }}
 }

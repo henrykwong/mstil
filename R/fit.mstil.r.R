@@ -5,6 +5,7 @@
 #' #@details The control argument is a list that accepts the following components.
 ##' \describe{
 ##'  \item{lambdaPenalty}{a positive value, represents the L1 penalty coefficient for lambda. By default 0.}
+##'  \item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 0.}
 ##'  \item{maxitOptimR}{a positive integer, represents the maximum number of iterations allowed in optim. By default 1e3.}
 ##' }
 #' @return a list with components:
@@ -29,7 +30,7 @@ fit.mstil.r <- function(x, param, control = list()) {
   lambdaPenalty <- control$lambdaPenalty
   maxitOptimR <- control$maxitOptimR
   k <- ncol(x)
-  
+  n <- nrow(x)
   if (missing(param)) param <- .default.init.param.method.t(x)
   .check.mstil.r.param(k, param$lambda, param$delta, param$Ainv, param$nu)
   
@@ -45,7 +46,7 @@ fit.mstil.r <- function(x, param, control = list()) {
     Ainv[lower.tri(Ainv, diag = TRUE)] <- param[(k + k + 1):(length(param) - 1)]
     lnu <- param[length(param)]
     nu <- exp(lnu)
-    res <- sum(dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE)) - lambdaPenalty * sum(abs(lambda)) - lambdaPenalty * sum(abs(lambda)) - ainvPenalty * sum(Ainv ^ 2)
+    res <- sum(dmstil.r(x, lambda, delta, Ainv, nu, log.p = TRUE)) - lambdaPenalty * sum(lambda ^ 2) - ainvPenalty * sum(Ainv ^ 2)
     return(res)
   }
   grad <- function(param) {
@@ -56,7 +57,7 @@ fit.mstil.r <- function(x, param, control = list()) {
     lnu <- param[length(param)]
     nu <- exp(lnu)
     grad <- .mstil.r.grad(x, lambda, delta, Ainv, nu)
-    grad$dlambda <- grad$dlambda - lambdaPenalty * sign(lambda)
+    grad$dlambda <- grad$dlambda - 2 * lambdaPenalty * lambda
     grad$dAinv <- grad$dAinv - 2 * ainvPenalty * Ainv
     gr <- c(diag(grad$dlambda), grad$dmu, grad$dAinv[lower.tri(diag(k), diag = TRUE)], grad$dlnu)
     
