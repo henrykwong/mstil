@@ -77,7 +77,7 @@
   ainvPenalty <- control$ainvPenalty
   numGradSample <- control$numGradSample
   maxitOptim <- control$maxitOptim
-  lambdaPenalty <- control$lambdaPenalty
+  lambdaPenalty <- nrow(x) * control$lambdaPenalty
   
 
   p <- ncol(lambda)
@@ -254,7 +254,7 @@
 
   numGradSample <- control$numGradSample
   maxitOptim <- control$maxitOptim
-  lambdaPenalty <- control$lambdaPenalty
+  lambdaPenalty <- sum(w) * control$lambdaPenalty
   p <- ncol(lambda)
   k <- ncol(x)
   n <- nrow(x)
@@ -379,7 +379,7 @@
   if (!"ainvPenalty" %in% names(control)) control$ainvPenalty <- 1e-6
   ainvPenalty <- control$ainvPenalty
   maxitOptimR <- control$maxitOptimR
-  lambdaPenalty <- control$lambdaPenalty
+  lambdaPenalty <- sum(w) * control$lambdaPenalty
 
   k <- ncol(x)
   n <- nrow(x)
@@ -466,6 +466,7 @@
   )
   param$Ainv[which(is.infinite(param$Ainv))] <- 10000
   param$Ainv[upper.tri(param$Ainv, diag = FALSE)] <- 0
+  if (any(is.na(param$Ainv))) param$Ainv <- diag(ncol(x))
   return(param)
 }
 
@@ -490,95 +491,13 @@
   )
   param$Ainv[which(is.infinite(param$Ainv))] <- 10000
   param$Ainv[upper.tri(param$Ainv, diag = FALSE)] <- 0
+  if (any(is.na(param$Ainv))) param$Ainv <- diag(ncol(x))
   return(param)
 }
 
 #' @keywords internal
 .default.init.cluster.method.kmeans <- function(x, K) {
   return(stats::kmeans(x, K)$cluster)
-}
-
-#' @keywords internal
-.cluster.fmmstil.K.parallel.divisive <- function(x, K, ncore = 1, cluster0, criteria = c('ICL', 'BIC', 'AIC'), init.cluster.method, init.param.method, show.progress = TRUE, control = list()) {
-  if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 1e-6
-  if (!"cvgTolR" %in% names(control)) control$cvgTolR <- 1e-1
-  if (ncore > parallel::detectCores()) {
-    ncore <- parallel::detectCores()
-    warning("Not enough available core")
-  }
-  if (missing(init.cluster.method)) init.cluster.method <- .default.init.cluster.method.kmeans
-  if (missing(init.param.method)) init.param.method <- .default.init.param.method.t
-  if (missing(criteria)) criteria <- 'ICL'
-  
-  if (show.progress) cat("\n", "MSTIL.R", "\t", "K : ", K, "\t", "Number of Trials : ", K - 1)
-  seedFmmstil <- sample(.Machine$integer.max, 1)
-  
-  if (K == 2) cluster0 <- rep(1, nrow(x))
-  ncore1 = min(ncore,(K-1))
-  cluster0 <- factor(cluster0, labels = 1:K, levels = 1:K)
-  
-  initParamList <- list()
-  for (trial in 1:(K - 1)){
-    initParamList[[trial]] <- list(omega = list(), lambda = list(), delta = list(), Ainv = list(), nu = list())
-    smallCluster <- factor(init.cluster.method(x[which(cluster0 == trial),], 2), labels = c(trial, K))
-    initCluster <- cluster0
-    initCluster[which(initCluster == trial)] <- smallCluster
-    initCluster <- as.numeric(initCluster)
-    
-    initParamList[[trial]]$omega <- as.list(table(initCluster) / length(initCluster))
-    for (kk in 1:K){
-      initFit <- init.param.method(x[which(initCluster == unique(initCluster)[kk]),])
-      initParamList[[trial]]$lambda[[kk]] = initFit$lambda
-      initParamList[[trial]]$delta[[kk]] = initFit$delta
-      initParamList[[trial]]$Ainv[[kk]] = initFit$Ainv
-      initParamList[[trial]]$nu[[kk]] = initFit$nu
-    }
-  }
-
-  
-  fit.fmmstil.r.seed.windows <- function(trial, data, K, initParamList, control = list()){
-    init.cluster = init.cluster.method(data,K)
-    res1 <- fit.fmmstil.r(data, K, initParamList[[trial]], show.progress = FALSE, control = control)
-    par <- res1$par[[which.max(res1$logLik)]]
-    fitness1 <- fmmstil.r.fitness(x, par)
-    res1$ICL <- fitness1$ICL
-    res1$clust <- fitness1$clust
-    res1$AIC <- fitness1$AIC
-    res1$BIC <- fitness1$BIC
-    return(res1)
-  }
-  
-  
-  cl <- parallel::makePSOCKcluster(ncore1)
-  parallel::setDefaultCluster(cl)
-  resRec <- parallel::parLapply(NULL, 1:(K-1), fit.fmmstil.r.seed.windows, control = control, data = x, K = K, initParamList = initParamList)
-  parallel::stopCluster(cl)
-  set.seed(seedFmmstil)
-  
-  
-  criteriaRec <- c()
-  for (i in 1:(K-1)) criteriaRec <- c(criteriaRec, resRec[[i]][[criteria]])
-  res1Best <- resRec[[which.min(criteriaRec)]]
-  par <- res1Best$par[[which.max(res1Best$logLik)]]
-  
-  
-  if (show.progress) cat("\t", "Min. ", criteria, " : ", (round(min(criteriaRec), 2)))
-  
-  if (show.progress) cat("\n", "MSTIL  ", "\t", "K : ", K, "\t")
-  res2Best <- fit.fmmstil.parallel(x, K, ncore = ncore, param = par, show.progress = FALSE, control = control)
-  
-  
-  par <- res2Best$par[[which.max(res2Best$logLik)]]
-  fitness2 <- fmmstil.fitness(x, par, control = control)
-  res2Best$ICL <- fitness2$ICL
-  res2Best$clust <- fitness2$clust
-  res2Best$AIC <- fitness2$AIC
-  res2Best$BIC <- fitness2$BIC
-
-  if (show.progress) cat("\t", "Min. ", criteria, " : ", (round(min(criteriaRec, res2Best[[criteria]]), 2)))
-
-  
-  return(list(restricted = res1Best, unrestricted = res2Best, recordR = resRec))
 }
 
 #' @keywords internal
@@ -648,4 +567,103 @@
     .check.mstil.r.param(k, param$lambda[[i]], param$delta[[i]], param$Ainv[[i]], param$nu[[i]])
   }
 }
+
+#' @keywords internal
+.cluster.fmmstil.K.parallel.divisive <- function(x, K, ncore = 1, cluster0, 
+                                                 criteria = c('ICL', 'BIC', 'AIC'), 
+                                                 init.cluster.method, init.param.method, 
+                                                 show.progress = TRUE, control = list()) {
+  
+  res1 <- .cluster.fmmstil.r.K.parallel.divisive(x, K, ncore, cluster0,
+                                                criteria, init.cluster.method, init.param.method,
+                                                show.progress, control = control)
+  
+  res1Best <- res1$res
+  par <- res1Best$par[[which.max(res1Best$logLik)]]
+  
+  if (show.progress) cat("\n", "MSTIL  ", "\t", "K : ", K, "\t")
+  
+  res2Best <- tryCatch(fit.fmmstil.parallel(x, K, ncore = ncore, param = par, show.progress = FALSE, control = control),
+                       error = function(e) res1Best)
+  
+  
+  par <- res2Best$par[[which.max(res2Best$logLik)]]
+  fitness2 <- fmmstil.fitness(x, par, control = control)
+  res2Best$ICL <- fitness2$ICL
+  res2Best$clust <- fitness2$clust
+  res2Best$AIC <- fitness2$AIC
+  res2Best$BIC <- fitness2$BIC
+  if (show.progress) cat("\t", "Min. ", criteria, " : ", (round(min(res1Best[[criteria]], res2Best[[criteria]]), 2)))
+  
+  
+  return(list(restricted = res1Best, unrestricted = res2Best, recordR = res1$recordR))
+}
+
+#' @keywords internal
+.cluster.fmmstil.r.K.parallel.divisive <- function(x, K, ncore = 1, cluster0, 
+                                                   criteria = c('ICL', 'BIC', 'AIC'), 
+                                                   init.cluster.method, init.param.method, 
+                                                   show.progress = TRUE, control = list()) {
+  if (!"cvgTolR" %in% names(control)) control$cvgTolR <- 1e-2
+  if (ncore > parallel::detectCores()) {
+    ncore <- parallel::detectCores()
+    warning("Not enough available core")
+  }
+  if (missing(init.cluster.method)) init.cluster.method <- .default.init.cluster.method.kmeans
+  if (missing(init.param.method)) init.param.method <- .default.init.param.method.t
+  if (missing(criteria)) criteria <- 'ICL'
+  
+  if (show.progress) cat("\n", "MSTIL.R", "\t", "K : ", K, "\t", "Number of Trials : ", K - 1)
+  seedFmmstil <- sample(.Machine$integer.max, 1)
+  
+  if (K == 2) cluster0 <- rep(1, nrow(x))
+  ncore1 = min(ncore,(K-1))
+  cluster0 <- factor(cluster0, labels = 1:K, levels = 1:K)
+  
+  initParamList <- list()
+  for (trial in 1:(K - 1)){
+    initParamList[[trial]] <- list(omega = list(), lambda = list(), delta = list(), Ainv = list(), nu = list())
+    smallCluster <- factor(init.cluster.method(x[which(cluster0 == trial),], 2), labels = c(trial, K))
+    initCluster <- cluster0
+    initCluster[which(initCluster == trial)] <- smallCluster
+    initCluster <- as.numeric(initCluster)
+    initParamList[[trial]]$omega <- as.list(table(initCluster) / length(initCluster))
+    for (kk in 1:K){
+      initFit <- init.param.method(x[which(initCluster == unique(initCluster)[kk]),])
+      initParamList[[trial]]$lambda[[kk]] = initFit$lambda
+      initParamList[[trial]]$delta[[kk]] = initFit$delta
+      initParamList[[trial]]$Ainv[[kk]] = initFit$Ainv
+      initParamList[[trial]]$nu[[kk]] = initFit$nu
+    }
+  }
+  
+  seed <- sample(.Machine$integer.max, (K - 1))
+  fit.fmmstil.r.seed.windows <- function(trial, data, K, initParamList, seed, control = list()){
+    set.seed(seed[trial])
+    init.cluster = init.cluster.method(data,K)
+    res1 <- fit.fmmstil.r(data, K, initParamList[[trial]], show.progress = FALSE, control = control)
+    par <- res1$par[[which.max(res1$logLik)]]
+    fitness1 <- fmmstil.r.fitness(x, par)
+    res1$ICL <- fitness1$ICL
+    res1$clust <- fitness1$clust
+    res1$AIC <- fitness1$AIC
+    res1$BIC <- fitness1$BIC
+    return(res1)
+  }
+  
+  
+  cl <- parallel::makePSOCKcluster(ncore1)
+  parallel::setDefaultCluster(cl)
+  resRec <- parallel::parLapply(NULL, 1:(K-1), fit.fmmstil.r.seed.windows, seed = seed, control = control, data = x, K = K, initParamList = initParamList)
+  parallel::stopCluster(cl)
+  set.seed(seedFmmstil)
+  
+  
+  criteriaRec <- c()
+  for (i in 1:(K-1)) criteriaRec <- c(criteriaRec, resRec[[i]][[criteria]])
+  res1Best <- resRec[[which.min(criteriaRec)]]
+  if (show.progress) cat("\t", "Min. ", criteria, " : ", (round(min(criteriaRec), 2)))
+  return(list(res = res1Best, recordR = resRec))
+}
+
 

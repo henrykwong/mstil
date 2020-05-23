@@ -12,7 +12,8 @@
 ##'  \item{numLikSample}{a positive integer, represents the number of samples used to estimate the density and log-likelihood functions. By default 1e6. }
 ##'  \item{conLevel}{a value between 0.5 and 1, represents the confidence level of the log-likelihood to be calculated. By default 0.95.}
 ##'  \item{cvgN}{a positive integer. The algorithm stops when the estimated log-likelihood is not improved in cvgN iterations. By default 5.}
-##'  \item{lambdaPenalty}{a positive value, represents the L1 penalty coefficient for lambda. By default 0.}
+##'  \item{lambdaPenalty}{a positive value, represents the L2 penalty coefficient for lambda. By default 1e-4.}
+##'  \item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 1e-6.}
 ##'  \item{maxit}{a positive integer, represents the maximum number of EM iterations allowed. By default 1e3.}
 ##'  \item{maxitOptim}{a positive integer, represents the maximum number of iterations in optim allowed within each M-step. By default 10.}
 ##'  \item{numGradSample}{a positive integer, represents the number of samples used to estimate the gradient. By default 1e4.}
@@ -47,7 +48,6 @@ fit.fmmstil.parallel <- function(x, K, ncore = 1, param, init.cluster, init.para
   batchSize <- min(control$batchSize, nrow(x))
   
   n <- nrow(x)
-  
   if (missing(param)) {
     param <- list(omega = list(), lambda = list(), delta = list(), Ainv = list(), nu = list())
     if (missing(init.param.method)) init.param.method <- .default.init.param.method.random
@@ -87,30 +87,47 @@ fit.fmmstil.parallel <- function(x, K, ncore = 1, param, init.cluster, init.para
   parallel::setDefaultCluster(cl)
   for (i in 1:maxit+1) {
     batch <- sample(nrow(x),batchSize)
-    fit.fmmstil.weighted.parallel <- function( clusterID, data, w, param, control = list(), batch){
-      res1 <- .fit.mstil.1.weighted(data[batch,], w[batch, clusterID], lambda = param$lambda[[clusterID]], delta = param$delta[[clusterID]], Ainv = param$Ainv[[clusterID]], nu = param$nu[[clusterID]], control = control)
-      res1$nu <- .fit.mstil.2.weighted(data[batch,], w[batch, clusterID], lambda = res1$lambda, delta = res1$delta, Ainv = res1$Ainv, nu = res1$nu, control = control)
+    seed <- sample(.Machine$integer.max, K)
+    fit.fmmstil.weighted.parallel <- function( clusterID, data, w, param, seed, control = list(), batch){
+      set.seed(seed[clusterID])
+      res1 <- .fit.mstil.1.weighted(data[batch,], w[batch, clusterID], 
+                                    lambda = param$lambda[[clusterID]], 
+                                    delta = param$delta[[clusterID]], 
+                                    Ainv = param$Ainv[[clusterID]], 
+                                    nu = param$nu[[clusterID]], control = control)
+      res1$nu <- .fit.mstil.2.weighted(data[batch,], w[batch, clusterID], 
+                                       lambda = res1$lambda, 
+                                       delta = res1$delta, 
+                                       Ainv = res1$Ainv, 
+                                       nu = res1$nu, control = control)
       res1$lik <- dmstil(data, lambda = res1$lambda, delta = res1$delta, Ainv = res1$Ainv, nu = res1$nu, log.p = FALSE, control = control)
       return(res1)
     }
     
+    fitted <- parallel::parLapply(NULL, 1:K, fit.fmmstil.weighted.parallel, seed = seed, control = control, data = x, w = w, param = res, batch = batch)
     
-    fitted <- parallel::parLapply(NULL, 1:K, fit.fmmstil.weighted.parallel, control = control, data = x, w = w, param = res, batch = batch)
-    
-    w_ <- matrix(NA, nrow = n, ncol = K)
+    w_1 <- matrix(NA, nrow = n, ncol = K)
     for (clusterID in 1:K){
-      w_[,clusterID] <- res$omega[[clusterID]] * fitted[[clusterID]]$lik
-      res$lambda[[clusterID]] <- fitted[[clusterID]]$lambda
-      res$delta[[clusterID]] <- fitted[[clusterID]]$delta
-      res$Ainv[[clusterID]] <- fitted[[clusterID]]$Ainv
-      res$nu[[clusterID]] <- fitted[[clusterID]]$nu
+      w_1[,clusterID] <- res$omega[[clusterID]] * fitted[[clusterID]]$lik
     }
-    d <- rowSums(w_)
+    d <- rowSums(w_1)
     logLik <- sum(log(d))
-    w <- w_ / d
+    if (!is.na(logLik)){
+      w_ <- w_1
+      w <- w_ / d
+      for (clusterID in 1:K){
+        res$lambda[[clusterID]] <- fitted[[clusterID]]$lambda
+        res$delta[[clusterID]] <- fitted[[clusterID]]$delta
+        res$Ainv[[clusterID]] <- fitted[[clusterID]]$Ainv
+        res$nu[[clusterID]] <- fitted[[clusterID]]$nu
+      }
+    } else{
+      logLik <- likRec[length(likRec)]
+    }
+    resRec[[length(likRec)]] <- res
     res$omega <- as.list(colSums(w) / n)
     likRec <- c(likRec, logLik)
-    resRec[[length(likRec)]] <- res
+   
     timeRec <- c(timeRec, difftime(Sys.time(), startTime, units = "secs"))
     
     if (show.progress) {

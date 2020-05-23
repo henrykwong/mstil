@@ -30,7 +30,14 @@ fmmstil.fitness <- function(x, param, u, control = list()) {
   nK <- table(guess)
   mK <- m * K + K - 1
   p <- apply(weight, 1, max)
-  ICL <- ( logLik - log(n) / 2 * mK + sum(log(p)) ) * -2
+  estEntropy <- sum(log(p)) * -2  
+  BIC <- log(n) * mK - 2 * logLik
+  AIC <- 2 * mK - 2 * logLik
+  ICL <- BIC + estEntropy
   if (any(nK < (k + 1)) || length(nK) < K) ICL <- Inf
-  return( list(logLik = logLik, ICL = ICL, clust = guess, BIC = log(n) * mK - 2 * logLik, AIC = 2 * mK - 2 * logLik))
-}
+  ICL2 <- ICL + estEntropy
+  return( list(logLik = logLik, clust = guess,
+               AIC = AIC, BIC = BIC,
+               estEntropy = estEntropy,
+               ICL = ICL))
+  }

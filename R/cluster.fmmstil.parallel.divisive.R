@@ -8,7 +8,7 @@
 #' @param control list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil. In this case, the default lambdaPenalty is 1e-2 and the default cvgTolR is 1e-1.
 #' @return a list with components:
 #' \item{res}{a list containing details of the best fitted distribution.}
-#' \item{recordR}{a list of lists containing details all fitted fmmstil.r.}
+#' \item{record}{a list of lists containing details all fitted fmmstil.r.}
 #' @export
 #' @examples
 #' # Not run:
@@ -30,8 +30,8 @@ cluster.fmmstil.parallel.divisive <- function(x, ncore = 1, criteria = c('ICL', 
   minCritiera <- Inf
   while (TRUE) {
     if (K > 2) cluster0 <- res$unrestricted$clust
-    if (K == 1) res <- cluster.fmmstil.K.parallel.random(x, K, ncore, init.cluster.method = init.cluster.method, init.param.method = init.param.method, control = control, show.progress = show.progress)
-    else res <- .cluster.fmmstil.K.parallel.divisive(x = x, K = K, ncore = ncore, cluster0 = cluster0, criteria = 'ICL', init.cluster.method = init.cluster.method, init.param.method = init.param.method, show.progress = show.progress, control = control)
+    if (K == 1) res <- cluster.fmmstil.K.parallel.random(x, K, ncore, criteria = criteria, init.cluster.method = init.cluster.method, init.param.method = init.param.method, control = control, show.progress = show.progress)
+    else res <- .cluster.fmmstil.K.parallel.divisive(x = x, K = K, ncore = ncore, cluster0 = cluster0, criteria = criteria, init.cluster.method = init.cluster.method, init.param.method = init.param.method, show.progress = show.progress, control = control)
     if (show.progress) cat("\n")
     resRec[[K]] <- list()
     resRec[[K]]$restricted <- res$recordR

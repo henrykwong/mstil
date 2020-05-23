@@ -4,7 +4,7 @@
 #' @param control list of control variables, see 'details'.
 #' #@details The control argument is a list that accepts the following components.
 ##' \describe{
-##'  \item{lambdaPenalty}{a positive value, represents the L1 penalty coefficient for lambda. By default 0.}
+##'  \item{lambdaPenalty}{a positive value, represents the L2 penalty coefficient for lambda. By default 0.}
 ##'  \item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 0.}
 ##'  \item{maxitOptimR}{a positive integer, represents the maximum number of iterations allowed in optim. By default 1e3.}
 ##' }
@@ -27,7 +27,7 @@ fit.mstil.r <- function(x, param, control = list()) {
   if (!"maxitOptimR" %in% names(control)) control$maxitOptimR <- 1e3
   if (!"ainvPenalty" %in% names(control)) control$ainvPenalty <- 0
   ainvPenalty <- control$ainvPenalty
-  lambdaPenalty <- control$lambdaPenalty
+  lambdaPenalty <- nrow(x) * control$lambdaPenalty
   maxitOptimR <- control$maxitOptimR
   k <- ncol(x)
   n <- nrow(x)

@@ -9,7 +9,7 @@
 #' @param control list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil. In this case, the default lambdaPenalty is 1e-2 and the default cvgTolR is 1e-1.
 #' @return a list with components:
 #' \item{res}{a list containing details of the best fitted distribution.}
-#' \item{recordR}{a list of lists containing details all fitted fmmstil.r.}
+#' \item{record}{a list of lists containing details all fitted fmmstil.r.}
 #' @export
 #' @examples
 #' # Not run:

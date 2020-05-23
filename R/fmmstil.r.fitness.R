@@ -11,7 +11,6 @@
 fmmstil.r.fitness <- function(x, param) {
   k <- ncol(x)
   n <- nrow(x)
-  
   .check.fmmstil.r.param(k, param)
   
   weight <- .fmmstil.r.weight(x, param$omega, param$lambda,param$delta, param$Ainv, param$nu)
@@ -23,7 +22,13 @@ fmmstil.r.fitness <- function(x, param) {
   nK <- table(guess)
   mK <- m * K + K - 1
   p <- apply(weight, 1, max)
-  ICL <- ( logLik - log(n) / 2 * mK + sum(log(p)) ) * -2
+  estEntropy <- sum(log(p)) * -2  
+  BIC <- log(n) * mK - 2 * logLik
+  AIC <- 2 * mK - 2 * logLik
+  ICL <- BIC + estEntropy
   if (any(nK < (k + 1)) || length(nK) < K) ICL <- Inf
-  return( list(logLik = logLik, ICL = ICL, clust = guess, BIC = log(n) * mK - 2 * logLik, AIC = 2 * mK - 2 * logLik))
+  return( list(logLik = logLik, clust = guess,
+               AIC = AIC, BIC = BIC,
+               estEntropy = estEntropy,
+               ICL = ICL))
 }

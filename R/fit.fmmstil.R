@@ -11,7 +11,7 @@
 ##'  \item{numLikSample}{a positive integer, represents the number of samples used to estimate the density and log-likelihood functions. By default 1e6. }
 ##'  \item{conLevel}{a value between 0.5 and 1, represents the confidence level of the log-likelihood to be calculated. By default 0.95.}
 ##'  \item{cvgN}{a positive integer. The algorithm stops when the estimated log-likelihood is not improved in cvgN iterations. By default 5.}
-##'  \item{lambdaPenalty}{a positive value, represents the L1 penalty coefficient for lambda. By default 1e-6.}
+##'  \item{lambdaPenalty}{a positive value, represents the L2 penalty coefficient for lambda. By default 1e-4.}
 ##'  \item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 1e-6.}
 ##'  \item{maxit}{a positive integer, represents the maximum number of EM iterations allowed. By default 1e3.}
 ##'  \item{maxitOptim}{a positive integer, represents the maximum number of iterations in optim allowed within each M-step. By default 10.}
@@ -59,16 +59,20 @@ fit.fmmstil <- function(x, K, param, init.cluster, init.param.method, show.progr
   .check.fmmstil.param(ncol(x), param)
   
   res <- list(omega = param$omega, lambda = param$lambda, delta = param$delta, Ainv = param$Ainv, nu = param$nu)
-  
+  res1 <- res
   startTime <- Sys.time()
   likRec <- c()
   resRec <- list()
   timeRec <- c()
   for (i in 1:maxit) {
-    w_ <- .fmmstil.weight(x, res$omega, res$lambda, res$delta, res$Ainv, res$nu, control = control)
-    d <- rowSums(w_)
+    w_1 <- .fmmstil.weight(x, res1$omega, res1$lambda, res1$delta, res1$Ainv, res1$nu, control = control)
+    d <- rowSums(w_1)
     logLik <- sum(log(d))
-    w <- w_ / d
+    if (!is.na(logLik)){
+      w_ <- w_1
+      w <- w_ / d
+      res <- res1
+    }
     res$omega <- as.list(colSums(w) / n)
     likRec <- c(likRec, logLik)
     resRec[[i]] <- res
@@ -85,18 +89,24 @@ fit.fmmstil <- function(x, K, param, init.cluster, init.param.method, show.progr
     }
     batch <- sample(nrow(x),batchSize)
     for (j in 1:K) {
-      res1 <- .fit.mstil.1.weighted(x[batch,], w[batch, j], lambda = res$lambda[[j]], delta = res$delta[[j]], Ainv = res$Ainv[[j]], nu = res$nu[[j]], control = control)
-      res$lambda[[j]] <- res1$lambda
-      res$delta[[j]] <- res1$delta
-      res$Ainv[[j]] <- res1$Ainv
-      res$nu[[j]] <- .fit.mstil.2.weighted(x[batch,], w[batch, j], lambda = res$lambda[[j]], delta = res$delta[[j]], Ainv = res$Ainv[[j]], nu = res$nu[[j]], control = control)
+      res2 <- .fit.mstil.1.weighted(x[batch,], w[batch, j], lambda = res$lambda[[j]], delta = res$delta[[j]], Ainv = res$Ainv[[j]], nu = res$nu[[j]], control = control)
+      res1$lambda[[j]] <- res2$lambda
+      res1$delta[[j]] <- res2$delta
+      res1$Ainv[[j]] <- res2$Ainv
+      res1$nu[[j]] <- .fit.mstil.2.weighted(x[batch,], w[batch, j], lambda = res1$lambda[[j]], delta = res1$delta[[j]], Ainv = res1$Ainv[[j]], nu = res1$nu[[j]], control = control)
     }
   }
   
-  w_ <- .fmmstil.weight(x, res$omega, res$lambda, res$delta, res$Ainv, res$nu, control = control)
-  d <- rowSums(w_)
+  w_1 <- .fmmstil.weight(x, res1$omega, res1$lambda, res1$delta, res1$Ainv, res1$nu, control = control)
+  d <- rowSums(w_1)
   logLik <- sum(log(d))
-  w <- w_ / d
+  if (!is.na(logLik)){
+    w_ <- w_1
+    w <- w_ / d
+    res <- res1
+  } else{
+    logLik <- likRec[length(likRec)]
+  }
   res$omega <- as.list(colSums(w) / n)
   likRec <- c(likRec, logLik)
   resRec[[length(likRec)]] <- res

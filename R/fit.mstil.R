@@ -8,7 +8,7 @@
 ##'  \item{numLikSample}{a positive integer, represents the number of samples used to estimate the density and log-likelihood functions. By default 1e6. }
 ##'  \item{conLevel}{a value between 0.5 and 1, represents the confidence level of the log-likelihood to be calculated. By default 0.95.}
 ##'  \item{cvgN}{a positive interger. The algorithm stops when the estimated log-likelihood is not improved in cvgN iterations. By default 5.}
-##'  \item{lambdaPenalty}{a positive value, represents the L1 penalty coefficient for lambda. By default 0.}
+##'  \item{lambdaPenalty}{a positive value, represents the L2 penalty coefficient for lambda. By default 0.}
 ##'  \item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 0.}
 ##'  \item{maxit}{a positive integer, represents the maximum number iterations allowed. By default 0.}
 ##'  \item{maxitOptim}{maximum number of iterations in optim. By default 10.}

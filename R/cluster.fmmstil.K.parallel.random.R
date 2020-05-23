@@ -7,7 +7,7 @@
 #' @param init.cluster.method a function of x, K that seperates x into K initial clusters.
 #' @param init.param.method a function of x, returns initial parameters.
 #' @param show.progress a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.
-#' @param control list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil. In this case, the default lambdaPenalty is 1e-2 and the default cvgTolR is 1e-1.
+#' @param control list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil. In this case, the default cvgTolR is 1e-1.
 #' @return a list with components:
 #' \item{restricted}{a list containing details of the best fitted fmmstil.r.}
 #' \item{unrestricted}{a list containing details of the best fitted fmmstil.}
@@ -19,8 +19,7 @@
 #' # cluster.fmmstil.K.parallel.random(as.matrix(log(RiverFlow)),2,2)
 cluster.fmmstil.K.parallel.random <- function(x, K, ncore = 1, numTrial = 1, criteria = c('ICL', 'BIC', 'AIC'), init.cluster.method, init.param.method, show.progress = TRUE, control = list()) {
   .check.control(control)
-  if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 1e-2
-  if (!"cvgTolR" %in% names(control)) control$cvgTolR <- 1e-1
+  if (!"cvgTolR" %in% names(control)) control$cvgTolR <- 1e-2
   if (ncore > parallel::detectCores()) {
     ncore <- parallel::detectCores()
     warning("Not enough available core")
@@ -47,8 +46,9 @@ cluster.fmmstil.K.parallel.random <- function(x, K, ncore = 1, numTrial = 1, cri
     }
   }
   
-  
-  fit.fmmstil.r.seed.windows <- function(trial, data, K, initParamList, control = list()){
+  seed <- sample(.Machine$integer.max, numTrial)
+  fit.fmmstil.r.seed.windows <- function(trial, data, K, initParamList, seed, control = list()){
+    set.seed(seed[trial])
     init.cluster = init.cluster.method(data,K)
     res1 <- fit.fmmstil.r(data, K, initParamList[[trial]], show.progress = FALSE, control = control)
     par <- res1$par[[which.max(res1$logLik)]]
@@ -63,7 +63,7 @@ cluster.fmmstil.K.parallel.random <- function(x, K, ncore = 1, numTrial = 1, cri
   
   cl <- parallel::makePSOCKcluster(ncore1)
   parallel::setDefaultCluster(cl)
-  resRec <- parallel::parLapply(NULL, 1:numTrial, fit.fmmstil.r.seed.windows, control = control, data = x, K = K, initParamList = initParamList)
+  resRec <- parallel::parLapply(NULL, 1:numTrial, fit.fmmstil.r.seed.windows, seed = seed, control = control, data = x, K = K, initParamList = initParamList)
   parallel::stopCluster(cl)
   
   set.seed(seedFmmstil)
@@ -75,7 +75,8 @@ cluster.fmmstil.K.parallel.random <- function(x, K, ncore = 1, numTrial = 1, cri
   
   if (show.progress) cat("\t", "Min. ", criteria, " : ", (round(min(criteriaRec), 2)))
   if (show.progress) cat("\n", "MSTIL  ", "\t", "K : ", K, "\t")
-  res2Best <- fit.fmmstil.parallel(x, K, ncore = ncore, param = par, show.progress = FALSE, control = control)
+  res2Best <- tryCatch(fit.fmmstil.parallel(x, K, ncore = ncore, param = par, show.progress = FALSE, control = control),
+                       error = function(e) return(res1Best))
   
   par <- res2Best$par[[which.max(res2Best$logLik)]]
   fitness2 <- fmmstil.fitness(x, par, control = control)
@@ -85,7 +86,7 @@ cluster.fmmstil.K.parallel.random <- function(x, K, ncore = 1, numTrial = 1, cri
   res2Best$BIC <- fitness2$BIC
   
   if (show.progress) cat("\t", "Min. ", criteria, " : ", (round(min(criteriaRec, res2Best[[criteria]]), 2)))
-
+  
   
   return(list(restricted = res1Best, unrestricted = res2Best, recordR = resRec))
 }

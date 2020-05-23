@@ -2,7 +2,9 @@
 
 export(cluster.fmmstil.K.parallel.random)
 export(cluster.fmmstil.parallel.divisive)
+export(cluster.fmmstil.parallel.divisive.2)
 export(cluster.fmmstil.parallel.random)
+export(cluster.fmmstil.r.parallel.divisive)
 export(dmstil)
 export(dmstil.r)
 export(fit.fmmstil)

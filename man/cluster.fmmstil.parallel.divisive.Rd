@@ -32,7 +32,7 @@ cluster.fmmstil.parallel.divisive(
 \value{
 a list with components:
 \item{res}{a list containing details of the best fitted distribution.}
-\item{recordR}{a list of lists containing details all fitted fmmstil.r.}
+\item{record}{a list of lists containing details all fitted fmmstil.r.}
 }
 \description{
 Automatic model based clustering via fmmstil in parallel using divisive hierarchical method.

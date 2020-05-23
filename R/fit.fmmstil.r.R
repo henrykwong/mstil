@@ -10,7 +10,7 @@
 ##' \describe{
 ##'  \item{cvgNR}{a positive integer. The algorithm stops when the estimated log-likelihood is not improved by at least cvgTolR in cvgNR iterations. By default 5.}
 ##'  \item{cvgTolR}{a positive value. The algorithm stops when the estimated log-likelihood is not improved by at least cvgTolR in cvgNR iterations. By default 1e-2.}
-##'  \item{lambdaPenalty}{a positive value, represents the L1 penalty coefficient for lambda. By default 1e-6.}
+##'  \item{lambdaPenalty}{a positive value, represents the L2 penalty coefficient for lambda. By default 1e-4.}
 ##'  \item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 1e-6.}
 ##'  \item{maxitR}{a positive integer, represents the maximum number of EM iterations allowed. By default 1000.}
 ##'  \item{maxitOptimR}{a positive integer, represents the maximum number of iterations in optim allowed within each M-step. By default 1e2.}
@@ -33,13 +33,12 @@ fit.fmmstil.r <- function(x, K, param, init.cluster, init.param.method, show.pro
   if (!"batchSizeR" %in% names(control)) control$batchSizeR <- nrow(x)
   maxitR <- control$maxitR
   cvgNR <- control$cvgNR
-  cvgTolR <- control$cvgTolR
+  cvgTolR <- cvgNR * control$cvgTolR
 
   n <- nrow(x)
   
   batchSizeR <- min(nrow(x), control$batchSizeR)
   
-  identicalSamples <- max(table(factor((unique(data.frame(t(x)))))))
   
   if (missing(param)) {
     param <- list(omega = list(), lambda = list(), delta = list(), Ainv = list(), nu = list())
@@ -58,19 +57,29 @@ fit.fmmstil.r <- function(x, K, param, init.cluster, init.param.method, show.pro
   .check.fmmstil.r.param(ncol(x), param)
   
   res <- list(omega = param$omega, lambda = param$lambda, delta = param$delta, Ainv = param$Ainv, nu = param$nu)
+  res1 <- res
   startTime <- Sys.time()
   likRec <- c()
   resRec <- list()
   timeRec <- c()
   for (i in 1:maxitR) {
-    w_ <- .fmmstil.r.weight(x, res$omega, res$lambda, res$delta, res$Ainv, res$nu)
-    d <- rowSums(w_)
+    w_1 <- .fmmstil.r.weight(x, res1$omega, res1$lambda, res1$delta, res1$Ainv, res1$nu)
+    d <- rowSums(w_1)
     logLik <- sum(log(d))
-    w <- w_ / d
+    if (!is.na(logLik)){
+      w_ <- w_1
+      w <- w_ / d
+      res <- res1
+    } else{
+      logLik <- likRec[length(likRec)]
+    }
+    
     res$omega <- as.list(colSums(w) / n)
     likRec <- c(likRec, logLik)
     resRec[[i]] <- res
     timeRec <- c(timeRec, difftime(Sys.time(), startTime, units = "secs"))
+    
+    
     if (i > cvgNR) {
       if (all((likRec[i - cvgNR] + cvgTolR) > likRec[(i - cvgNR + 1):i])) {
         if (show.progress) cat("\n", "Converged!")
@@ -79,32 +88,30 @@ fit.fmmstil.r <- function(x, K, param, init.cluster, init.param.method, show.pro
       }
     }
     
-    if (any(colSums(w) < (identicalSamples + 1))){
-      if (show.progress) cat("\n", "Approaching singularity!")
-      return(list(logLik = likRec, par = resRec, time = timeRec))
-      break
-    }
-    
     
     
     if (show.progress) {
       cat("\r", "Iteration : ", i, "Current Likelihood : ", round(likRec[length(likRec)]), "Maximum Likelihood : ", round(max(likRec)), "\t")
     }
-    
     for (j in 1:K) {
       batch <- sample(nrow(x),batchSizeR)
-      res1 <- .fit.fmmstil.r.weighted(x[batch,], w[batch, j], lambda = res$lambda[[j]], delta = res$delta[[j]], Ainv = res$Ainv[[j]], nu = res$nu[[j]], control = control)
-      res$lambda[[j]] <- res1$lambda
-      res$delta[[j]] <- res1$delta
-      res$Ainv[[j]] <- res1$Ainv
-      res$nu[[j]] <- res1$nu
+      res2 <- .fit.fmmstil.r.weighted(x[batch,], w[batch, j], lambda = res$lambda[[j]], delta = res$delta[[j]], Ainv = res$Ainv[[j]], nu = res$nu[[j]], control = control)
+      res1$lambda[[j]] <- res2$lambda
+      res1$delta[[j]] <- res2$delta
+      res1$Ainv[[j]] <- res2$Ainv
+      res1$nu[[j]] <- res2$nu
     }
   }
   
-  w_ <- .fmmstil.r.weight(x, res$omega, res$lambda, res$delta, res$Ainv, res$nu)
-  d <- rowSums(w_)
+  w_1 <- .fmmstil.r.weight(x, res1$omega, res1$lambda, res1$delta, res1$Ainv, res1$nu)
+  d <- rowSums(w_1)
   logLik <- sum(log(d))
-  w <- w_ / d
+  if (!is.na(logLik)){
+    w_ <- w_1
+    w <- w_ / d
+    res <- res1
+    logLik <- likRec[length(likRec)]
+  }
   res$omega <- as.list(colSums(w) / n)
   likRec <- c(likRec, logLik)
   resRec[[length(likRec)]] <- res

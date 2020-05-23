@@ -44,7 +44,7 @@ The control argument is a list that accepts the following components.
 \item{numLikSample}{a positive integer, represents the number of samples used to estimate the density and log-likelihood functions. By default 1e6. }
 \item{conLevel}{a value between 0.5 and 1, represents the confidence level of the log-likelihood to be calculated. By default 0.95.}
 \item{cvgN}{a positive integer. The algorithm stops when the estimated log-likelihood is not improved in cvgN iterations. By default 5.}
-\item{lambdaPenalty}{a positive value, represents the L1 penalty coefficient for lambda. By default 1e-6.}
+\item{lambdaPenalty}{a positive value, represents the L2 penalty coefficient for lambda. By default 1e-4.}
 \item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 1e-6.}
 \item{maxit}{a positive integer, represents the maximum number of EM iterations allowed. By default 1e3.}
 \item{maxitOptim}{a positive integer, represents the maximum number of iterations in optim allowed within each M-step. By default 10.}
