@@ -8,9 +8,9 @@
 #' @param control list of control variables, see 'details'.
 #' @details The control argument is a list that accepts the following components.
 ##' \describe{
-##'  \item{cvgNR}{a positive integer. The algorithm stops when the estimated log-likelihood is not improved by at least cvgTolR in cvgNR iterations. By default 5.}
-##'  \item{cvgTolR}{a positive value. The algorithm stops when the estimated log-likelihood is not improved by at least cvgTolR in cvgNR iterations. By default 1e-2.}
-##'  \item{lambdaPenalty}{a positive value, represents the L2 penalty coefficient for lambda. By default 1e-4.}
+##'  \item{cvgNR}{a positive integer. The algorithm stops when the estimated log-likelihood is not improved by at least cvgTolR on average in cvgNR iterations. By default 5.}
+##'  \item{cvgTolR}{a positive value. The algorithm stops when the estimated log-likelihood is not improved by at least cvgTolR on average in cvgNR iterations. By default 1e-2.}
+##'  \item{lambdaPenalty}{a positive value, represents the L2 penalty coefficient for lambda. By default 1e-6.}
 ##'  \item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 1e-6.}
 ##'  \item{maxitR}{a positive integer, represents the maximum number of EM iterations allowed. By default 1000.}
 ##'  \item{maxitOptimR}{a positive integer, represents the maximum number of iterations in optim allowed within each M-step. By default 1e2.}
@@ -25,7 +25,7 @@
 #' # Not run:
 #' # data(RiverFlow)
 #' # fit.fmmstil.r(as.matrix(log(RiverFlow)), 2)
-fit.fmmstil.r <- function(x, K, param, init.cluster, init.param.method, show.progress = TRUE, control = list()) {
+fit.fmmstil.r <- function(x, K, param = NULL, init.cluster, init.param.method, show.progress = TRUE, control = list()) {
   .check.control(control)
   if (!"maxitR" %in% names(control)) control$maxitR <- 1e3
   if (!"cvgTolR" %in% names(control)) control$cvgTolR <- 1e-2
@@ -40,13 +40,13 @@ fit.fmmstil.r <- function(x, K, param, init.cluster, init.param.method, show.pro
   batchSizeR <- min(nrow(x), control$batchSizeR)
   
   
-  if (missing(param)) {
+  if (missing(param) | is.null(param)) {
     param <- list(omega = list(), lambda = list(), delta = list(), Ainv = list(), nu = list())
     if (missing(init.param.method)) init.param.method <- .default.init.param.method.random
     if (missing(init.cluster)) init.cluster <- .default.init.cluster.method.random(x, K)
     param$omega <- as.list(table(init.cluster) / n)
     for (i in 1:K) {
-      initFit <- init.param.method(x[which(init.cluster == unique(init.cluster)[i]), ])
+      initFit <- init.param.method(x[which(init.cluster == i), ])
       param$lambda[[i]] <- initFit$lambda
       param$delta[[i]] <- initFit$delta
       param$Ainv[[i]] <- initFit$Ainv

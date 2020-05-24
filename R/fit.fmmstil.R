@@ -11,7 +11,7 @@
 ##'  \item{numLikSample}{a positive integer, represents the number of samples used to estimate the density and log-likelihood functions. By default 1e6. }
 ##'  \item{conLevel}{a value between 0.5 and 1, represents the confidence level of the log-likelihood to be calculated. By default 0.95.}
 ##'  \item{cvgN}{a positive integer. The algorithm stops when the estimated log-likelihood is not improved in cvgN iterations. By default 5.}
-##'  \item{lambdaPenalty}{a positive value, represents the L2 penalty coefficient for lambda. By default 1e-4.}
+##'  \item{lambdaPenalty}{a positive value, represents the L2 penalty coefficient for lambda. By default 1e-6.}
 ##'  \item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 1e-6.}
 ##'  \item{maxit}{a positive integer, represents the maximum number of EM iterations allowed. By default 1e3.}
 ##'  \item{maxitOptim}{a positive integer, represents the maximum number of iterations in optim allowed within each M-step. By default 10.}
@@ -31,7 +31,7 @@
 #' # Not run:
 #' # data(RiverFlow)
 #' # fit.fmmstil(as.matrix(log(RiverFlow)), 2)
-fit.fmmstil <- function(x, K, param, init.cluster, init.param.method, show.progress = TRUE, control = list()) {
+fit.fmmstil <- function(x, K, param = NULL, init.cluster, init.param.method, show.progress = TRUE, control = list()) {
   .check.control(control)
   
   if (!"maxit" %in% names(control)) control$maxit <- 1e3
@@ -43,13 +43,13 @@ fit.fmmstil <- function(x, K, param, init.cluster, init.param.method, show.progr
   
   n <- nrow(x)
   
-  if (missing(param)) {
+  if (missing(param) | is.null(param)) {
     param <- list(omega = list(), lambda = list(), delta = list(), Ainv = list(), nu = list())
     if (missing(init.param.method)) init.param.method <- .default.init.param.method.random
     if (missing(init.cluster)) init.cluster <- .default.init.cluster.method.random(x, K)
     param$omega <- as.list(table(init.cluster) / n)
     for (i in 1:K) {
-      initFit <- init.param.method(x[which(init.cluster == unique(init.cluster)[i]), ])
+      initFit <- init.param.method(x[which(init.cluster == i), ])
       param$lambda[[i]] <- initFit$lambda
       param$delta[[i]] <- initFit$delta
       param$Ainv[[i]] <- initFit$Ainv

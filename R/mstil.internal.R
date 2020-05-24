@@ -74,7 +74,7 @@
   if (!"maxitOptim" %in% names(control)) control$maxitOptim <- 10
   if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 0
   if (!"ainvPenalty" %in% names(control)) control$ainvPenalty <- 0
-  ainvPenalty <- control$ainvPenalty
+  ainvPenalty <-  nrow(x) * control$ainvPenalty
   numGradSample <- control$numGradSample
   maxitOptim <- control$maxitOptim
   lambdaPenalty <- nrow(x) * control$lambdaPenalty
@@ -250,8 +250,7 @@
   if (!"maxitOptim" %in% names(control)) control$maxitOptim <- 1e1
   if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 1e-6
   if (!"ainvPenalty" %in% names(control)) control$ainvPenalty <- 1e-6
-  ainvPenalty <- control$ainvPenalty
-
+  ainvPenalty <-  sum(w) * control$ainvPenalty
   numGradSample <- control$numGradSample
   maxitOptim <- control$maxitOptim
   lambdaPenalty <- sum(w) * control$lambdaPenalty
@@ -377,7 +376,7 @@
   if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 1e-6
   if (!"maxitOptimR" %in% names(control)) control$maxitOptimR <- 1e2
   if (!"ainvPenalty" %in% names(control)) control$ainvPenalty <- 1e-6
-  ainvPenalty <- control$ainvPenalty
+  ainvPenalty <- sum(w) * control$ainvPenalty
   maxitOptimR <- control$maxitOptimR
   lambdaPenalty <- sum(w) * control$lambdaPenalty
 
@@ -604,7 +603,6 @@
                                                    criteria = c('ICL', 'BIC', 'AIC'), 
                                                    init.cluster.method, init.param.method, 
                                                    show.progress = TRUE, control = list()) {
-  if (!"cvgTolR" %in% names(control)) control$cvgTolR <- 1e-2
   if (ncore > parallel::detectCores()) {
     ncore <- parallel::detectCores()
     warning("Not enough available core")
@@ -619,7 +617,6 @@
   if (K == 2) cluster0 <- rep(1, nrow(x))
   ncore1 = min(ncore,(K-1))
   cluster0 <- factor(cluster0, labels = 1:K, levels = 1:K)
-  
   initParamList <- list()
   for (trial in 1:(K - 1)){
     initParamList[[trial]] <- list(omega = list(), lambda = list(), delta = list(), Ainv = list(), nu = list())
@@ -628,12 +625,15 @@
     initCluster[which(initCluster == trial)] <- smallCluster
     initCluster <- as.numeric(initCluster)
     initParamList[[trial]]$omega <- as.list(table(initCluster) / length(initCluster))
-    for (kk in 1:K){
-      initFit <- init.param.method(x[which(initCluster == unique(initCluster)[kk]),])
-      initParamList[[trial]]$lambda[[kk]] = initFit$lambda
-      initParamList[[trial]]$delta[[kk]] = initFit$delta
-      initParamList[[trial]]$Ainv[[kk]] = initFit$Ainv
-      initParamList[[trial]]$nu[[kk]] = initFit$nu
+   
+    if (all(table(initCluster) > ncol(x))){
+      for (kk in 1:K){
+        initFit <- init.param.method(x[which(initCluster == kk),])
+        initParamList[[trial]]$lambda[[kk]] = initFit$lambda
+        initParamList[[trial]]$delta[[kk]] = initFit$delta
+        initParamList[[trial]]$Ainv[[kk]] = initFit$Ainv
+        initParamList[[trial]]$nu[[kk]] = initFit$nu
+      }
     }
   }
   

@@ -4,7 +4,7 @@
 \alias{fit.mstil}
 \title{This function finds the maximum penalised quasi likelihood estiamtes for mstil.}
 \usage{
-fit.mstil(x, param, show.progress = TRUE, control = list())
+fit.mstil(x, param = NULL, show.progress = TRUE, control = list())
 }
 \arguments{
 \item{x}{matrix of quantiles of size n x k. Each row is taken as a quantile.}

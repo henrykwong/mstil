@@ -4,7 +4,7 @@
 \alias{fit.mstil.r}
 \title{This function finds the maximum likelihood estimations for restricted mstil.}
 \usage{
-fit.mstil.r(x, param, control = list())
+fit.mstil.r(x, param = NULL, control = list())
 }
 \arguments{
 \item{x}{matrix of quantiles of size n x k. Each row is taken as a quantile.}

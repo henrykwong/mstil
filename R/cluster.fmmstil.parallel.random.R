@@ -6,7 +6,7 @@
 #' @param init.cluster.method a function of x, K that seperates x into K initial clusters. 
 #' @param init.param.method a function of x, returns initial parameters.
 #' @param show.progress a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.
-#' @param control list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil. In this case, the default lambdaPenalty is 1e-2 and the default cvgTolR is 1e-1.
+#' @param control list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil.
 #' @return a list with components:
 #' \item{res}{a list containing details of the best fitted distribution.}
 #' \item{record}{a list of lists containing details all fitted fmmstil.r.}

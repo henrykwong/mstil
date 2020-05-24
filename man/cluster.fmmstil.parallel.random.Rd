@@ -30,7 +30,7 @@ cluster.fmmstil.parallel.random(
 
 \item{show.progress}{a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.}
 
-\item{control}{list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil. In this case, the default lambdaPenalty is 1e-2 and the default cvgTolR is 1e-1.}
+\item{control}{list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil.}
 }
 \value{
 a list with components:

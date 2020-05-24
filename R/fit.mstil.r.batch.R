@@ -5,8 +5,8 @@
 #' @param control list of control variables, see 'details'.
 #' @details The control argument is a list that accepts the following components.
 ##' \describe{
-##'  \item{cvgNR}{a positive integer. The algorithm stops when the estimated log-likelihood is not improved by at least cvgTolR in cvgNR iterations. By default 5.}
-##'  \item{cvgTolR}{a positive value. The algorithm stops when the estimated log-likelihood is not improved by at least cvgTolR in cvgNR iterations. By default 1e-2.}
+##'  \item{cvgNR}{a positive integer. The algorithm stops when the estimated log-likelihood is not improved by at least cvgTolR on average in cvgNR iterations. By default 5.}
+##'  \item{cvgTolR}{a positive value. The algorithm stops when the estimated log-likelihood is not improved by at least cvgTolR on average in cvgNR iterations. By default 1e-2.}
 ##'  \item{lambdaPenalty}{a positive value, represents the L2 penalty coefficient for lambda. By default 0.}
 ##'  \item{ainvPenalty}{a positive value, represents the L2 penalty coefficient for Ainv. By default 0.}
 ##'  \item{maxitR}{a positive integer, represents the maximum number iterations allowed. By default 1e3.}
@@ -22,7 +22,7 @@
 #' # Not run:
 #' # data(RiverFlow)
 #' # fit.mstil.r.batch(as.matrix(log(RiverFlow)), control = list(batchSizeR = 100))
-fit.mstil.r.batch <- function(x, param, show.progress = TRUE, control = list()) {
+fit.mstil.r.batch <- function(x, param = NULL, show.progress = TRUE, control = list()) {
   .check.control(control)
   if (!"maxitR" %in% names(control)) control$maxitR <- 1e3
   if (!"cvgNR" %in% names(control)) control$cvgNR <- 5
@@ -34,7 +34,7 @@ fit.mstil.r.batch <- function(x, param, show.progress = TRUE, control = list()) 
   
   batchSizeR <- min(nrow(x), control$batchSizeR)
 
-  if (missing(param)) param <- .default.init.param.method.t(x)
+  if (missing(param) | is.null(param)) param <- .default.init.param.method.t(x)
   .check.mstil.r.param(ncol(x), param$lambda, param$delta, param$Ainv, param$nu)
   
   res <- list(lambda = param$lambda, delta = param$delta, Ainv = param$Ainv, nu = param$nu)

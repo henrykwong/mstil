@@ -30,7 +30,7 @@
 #' # Not run:
 #' # data(RiverFlow)
 #' # fit.mstil(as.matrix(log(RiverFlow)))
-fit.mstil <- function(x, param, show.progress = TRUE, control = list()) {
+fit.mstil <- function(x, param = NULL, show.progress = TRUE, control = list()) {
   .check.control(control)
   
   if (!"maxit" %in% names(control)) control$maxit <- 1e3
@@ -40,7 +40,7 @@ fit.mstil <- function(x, param, show.progress = TRUE, control = list()) {
   cvgN <- control$cvgN
   batchSize <- min(control$batchSize, nrow(x))
   
-  if (missing(param)){
+  if (missing(param) | is.null(param)){
     if (batchSize == nrow(x)) param <- fit.mstil.r(x, control = control)
     else{
       control$batchSizeR <- control$batchSize

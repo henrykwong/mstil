@@ -2,7 +2,7 @@
 % Please edit documentation in R/cluster.fmmstil.parallel.divisive.R
 \name{cluster.fmmstil.parallel.divisive}
 \alias{cluster.fmmstil.parallel.divisive}
-\title{Automatic model based clustering via fmmstil in parallel using divisive hierarchical method.}
+\title{Automatic model based clustering via fmmstil in parallel using divisive hierarchical method 1.}
 \usage{
 cluster.fmmstil.parallel.divisive(
   x,
@@ -27,7 +27,7 @@ cluster.fmmstil.parallel.divisive(
 
 \item{show.progress}{a logical value. If TRUE, progress of the algorithm will be printed in console. By default TRUE.}
 
-\item{control}{list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil. In this case, the default lambdaPenalty is 1e-2 and the default cvgTolR is 1e-1.}
+\item{control}{list of control variables, it accepts all control arguments used in fit.fmmstil.r and fit.fmmsil.}
 }
 \value{
 a list with components:
@@ -35,7 +35,7 @@ a list with components:
 \item{record}{a list of lists containing details all fitted fmmstil.r.}
 }
 \description{
-Automatic model based clustering via fmmstil in parallel using divisive hierarchical method.
+Automatic model based clustering via fmmstil in parallel using divisive hierarchical method 1.
 }
 \examples{
 # Not run:

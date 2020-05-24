@@ -19,19 +19,19 @@
 #' # Not run:
 #' # data(RiverFlow)
 #' # fit.mstil.r(as.matrix(log(RiverFlow)))
-fit.mstil.r <- function(x, param, control = list()) {
+fit.mstil.r <- function(x, param = NULL, control = list()) {
   
   .check.control(control)
   
   if (!"lambdaPenalty" %in% names(control)) control$lambdaPenalty <- 0
   if (!"maxitOptimR" %in% names(control)) control$maxitOptimR <- 1e3
   if (!"ainvPenalty" %in% names(control)) control$ainvPenalty <- 0
-  ainvPenalty <- control$ainvPenalty
+  ainvPenalty <- nrow(x) * control$ainvPenalty
   lambdaPenalty <- nrow(x) * control$lambdaPenalty
   maxitOptimR <- control$maxitOptimR
   k <- ncol(x)
   n <- nrow(x)
-  if (missing(param)) param <- .default.init.param.method.t(x)
+  if (missing(param) | is.null(param)) param <- .default.init.param.method.t(x)
   .check.mstil.r.param(k, param$lambda, param$delta, param$Ainv, param$nu)
   
   lambda <- param$lambda
