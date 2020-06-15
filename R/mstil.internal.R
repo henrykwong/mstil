@@ -611,22 +611,21 @@
   if (missing(init.param.method)) init.param.method <- .default.init.param.method.t
   if (missing(criteria)) criteria <- 'ICL'
   
-  if (show.progress) cat("\n", "MSTIL.R", "\t", "K : ", K, "\t", "Number of Trials : ", K - 1)
+  if (show.progress) cat("\n", "MSTIL.R", "\t", "K : ", K, "\t", "Number of Trials : ", K )
   seedFmmstil <- sample(.Machine$integer.max, 1)
   
   if (K == 2) cluster0 <- rep(1, nrow(x))
-  ncore1 = min(ncore,(K-1))
+  ncore1 = min(ncore,K)
   cluster0 <- factor(cluster0, labels = 1:K, levels = 1:K)
   initParamList <- list()
   for (trial in 1:(K - 1)){
-    initParamList[[trial]] <- list(omega = list(), lambda = list(), delta = list(), Ainv = list(), nu = list())
     smallCluster <- factor(init.cluster.method(x[which(cluster0 == trial),], 2), labels = c(trial, K))
     initCluster <- cluster0
     initCluster[which(initCluster == trial)] <- smallCluster
     initCluster <- as.numeric(initCluster)
-    initParamList[[trial]]$omega <- as.list(table(initCluster) / length(initCluster))
-   
     if (all(table(initCluster) > ncol(x))){
+      initParamList[[trial]] <- list(omega = list(), lambda = list(), delta = list(), Ainv = list(), nu = list())
+      initParamList[[trial]]$omega <- as.list(table(initCluster) / length(initCluster))
       for (kk in 1:K){
         initFit <- init.param.method(x[which(initCluster == kk),])
         initParamList[[trial]]$lambda[[kk]] = initFit$lambda
@@ -634,14 +633,17 @@
         initParamList[[trial]]$Ainv[[kk]] = initFit$Ainv
         initParamList[[trial]]$nu[[kk]] = initFit$nu
       }
-    }
+    } else initParamList[[trial]] <- 'randomStart'
   }
   
-  seed <- sample(.Machine$integer.max, (K - 1))
+  initParamList[[K]] <- 'randomStart'
+  seed <- sample(.Machine$integer.max, (K))
   fit.fmmstil.r.seed.windows <- function(trial, data, K, initParamList, seed, control = list()){
     set.seed(seed[trial])
     init.cluster = init.cluster.method(data,K)
-    res1 <- fit.fmmstil.r(data, K, initParamList[[trial]], show.progress = FALSE, control = control)
+    if (initParamList[[trial]] == 'randomStart') par <- NULL
+    else par <- initParamList[[trial]]
+    res1 <- fit.fmmstil.r(data, K, par, show.progress = FALSE, control = control)
     par <- res1$par[[which.max(res1$logLik)]]
     fitness1 <- fmmstil.r.fitness(x, par)
     res1$ICL <- fitness1$ICL
@@ -654,13 +656,13 @@
   
   cl <- parallel::makePSOCKcluster(ncore1)
   parallel::setDefaultCluster(cl)
-  resRec <- parallel::parLapply(NULL, 1:(K-1), fit.fmmstil.r.seed.windows, seed = seed, control = control, data = x, K = K, initParamList = initParamList)
+  resRec <- parallel::parLapply(NULL, 1:K, fit.fmmstil.r.seed.windows, seed = seed, control = control, data = x, K = K, initParamList = initParamList)
   parallel::stopCluster(cl)
   set.seed(seedFmmstil)
   
   
   criteriaRec <- c()
-  for (i in 1:(K-1)) criteriaRec <- c(criteriaRec, resRec[[i]][[criteria]])
+  for (i in 1:(K)) criteriaRec <- c(criteriaRec, resRec[[i]][[criteria]])
   res1Best <- resRec[[which.min(criteriaRec)]]
   if (show.progress) cat("\t", "Min. ", criteria, " : ", (round(min(criteriaRec), 2)))
   return(list(res = res1Best, recordR = resRec))

@@ -13,10 +13,6 @@
 #' \item{unrestricted}{a list containing details of the best fitted fmmstil.}
 #' \item{recordR}{a list of list containing details all fitted fmmstil.r.}
 #' @export
-#' @examples
-#' # Not run:
-#' # data(RiverFlow)
-#' # cluster.fmmstil.K.parallel.random(as.matrix(log(RiverFlow)),2,2)
 cluster.fmmstil.K.parallel.random <- function(x, K, ncore = 1, numTrial = 1, criteria = c('ICL', 'BIC', 'AIC'), init.cluster.method, init.param.method, show.progress = TRUE, control = list()) {
   .check.control(control)
   if (!"cvgTolR" %in% names(control)) control$cvgTolR <- 1e-2

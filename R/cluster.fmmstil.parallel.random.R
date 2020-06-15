@@ -1,4 +1,4 @@
-#' Automatic model based clustering via fmmstil in parallel using random initial parameters
+#' Automatic model based clustering via fmmstil in parallel using random initial parameters.
 #' @param x matrix of quantiles of size n x k. Each row is taken as a quantile.
 #' @param ncore a positive integer, represents the number of cpu threads to be used in parallel. By default 1.
 #' @param numTrial.fun a function of K that returns the number of trials to be evaluated.
@@ -11,10 +11,6 @@
 #' \item{res}{a list containing details of the best fitted distribution.}
 #' \item{record}{a list of lists containing details all fitted fmmstil.r.}
 #' @export
-#' @examples
-#' # Not run:
-#' # data(RiverFlow)
-#' # cluster.fmmstil.parallel.random(as.matrix(log(RiverFlow)),2)
 cluster.fmmstil.parallel.random <- function(x, ncore = 1, numTrial.fun, criteria = c('ICL', 'BIC', 'AIC'), init.cluster.method, init.param.method, show.progress = TRUE, control = list()) {
   .check.control(control)
   if (missing(numTrial.fun)) numTrial.fun <- function(K) 2^K

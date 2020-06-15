@@ -7,15 +7,6 @@
 #' @param log.p a logical value. If TRUE, return the probability density function in logarithmic scale. By default FALSE.
 #' @return return a numeric vector of length n.
 #' @export
-#' @examples
-#' # Not run:
-#' # data(RiverFlow)
-#' # k <- ncol(RiverFlow)
-#' # lambda <- diag(k)
-#' # delta <- rep(0,k)
-#' # Ainv <- diag(k)
-#' # nu <- 2
-#' # dmstil.r(as.matrix(log(RiverFlow)), lambda, delta, Ainv, nu)
 dmstil.r <- function(x, lambda, delta, Ainv, nu, log.p = FALSE) {
   if (is.data.frame(x)) x <- as.matrix(x)
   if (any(diag(diag(lambda)) != lambda)) {

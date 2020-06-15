@@ -35,13 +35,3 @@ The control argument is a list that accepts the following components.
 \item{numLikSample}{number of samples used to estimate the density and log-likelihood functions. By default 1e6.}
 }
 }
-\examples{
-# Not run:
-# data(RiverFlow)
-# k <- ncol(RiverFlow)
-# lambda <- diag(k)
-# delta <- rep(0,k)
-# Ainv <- diag(k)
-# nu <- 2
-# dmstil(as.matrix(log(RiverFlow)), lambda, delta, Ainv, nu)
-}

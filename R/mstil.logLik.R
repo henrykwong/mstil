@@ -16,15 +16,6 @@
 #' \item{logLik}{the estimate of the log-likelihood function.}
 #' \item{logLikUpper}{the upper bound of the estimated log-likelihood function.}
 #' @export
-#' @examples
-#' # Not run:
-#' # data(RiverFlow)
-#' # k <- ncol(RiverFlow)
-#' # lambda <- diag(k)
-#' # delta <- rep(0,k)
-#' # Ainv <- diag(k)
-#' # nu <- 2
-#' # mstil.logLik(as.matrix(log(RiverFlow)), lambda, delta, Ainv, nu)
 mstil.logLik <- function(x, lambda, delta, Ainv, nu, u, control = list()) {
   n <- nrow(x)
   k <- ncol(x)

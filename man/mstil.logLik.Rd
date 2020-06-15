@@ -37,13 +37,3 @@ The control argument is a list that accepts the following components.
 \item{conLevel}{a value between 0.5 and 1, represents the 1 sided confidence level of the log-likelihood to be calculated. By default 0.95.}
 }
 }
-\examples{
-# Not run:
-# data(RiverFlow)
-# k <- ncol(RiverFlow)
-# lambda <- diag(k)
-# delta <- rep(0,k)
-# Ainv <- diag(k)
-# nu <- 2
-# mstil.logLik(as.matrix(log(RiverFlow)), lambda, delta, Ainv, nu)
-}

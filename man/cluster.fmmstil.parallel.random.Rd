@@ -2,7 +2,7 @@
 % Please edit documentation in R/cluster.fmmstil.parallel.random.R
 \name{cluster.fmmstil.parallel.random}
 \alias{cluster.fmmstil.parallel.random}
-\title{Automatic model based clustering via fmmstil in parallel using random initial parameters}
+\title{Automatic model based clustering via fmmstil in parallel using random initial parameters.}
 \usage{
 cluster.fmmstil.parallel.random(
   x,
@@ -38,10 +38,5 @@ a list with components:
 \item{record}{a list of lists containing details all fitted fmmstil.r.}
 }
 \description{
-Automatic model based clustering via fmmstil in parallel using random initial parameters
-}
-\examples{
-# Not run:
-# data(RiverFlow)
-# cluster.fmmstil.parallel.random(as.matrix(log(RiverFlow)),2)
+Automatic model based clustering via fmmstil in parallel using random initial parameters.
 }

@@ -40,5 +40,5 @@ Automatic model based clustering via fmmstil.r in parallel using divisive hierar
 \examples{
 # Not run:
 # data(RiverFlow)
-# cluster.fmmstil.parallel.divisive.2(as.matrix(log(RiverFlow)),2)
+# cluster.fmmstil.r.parallel.divisive(as.matrix(log(RiverFlow)))
 }

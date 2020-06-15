@@ -13,15 +13,6 @@
 ##' }
 #' @return return a numeric vector of length n.
 #' @export
-#' @examples
-#' # Not run:
-#' # data(RiverFlow)
-#' # k <- ncol(RiverFlow)
-#' # lambda <- diag(k)
-#' # delta <- rep(0,k)
-#' # Ainv <- diag(k)
-#' # nu <- 2
-#' # dmstil(as.matrix(log(RiverFlow)), lambda, delta, Ainv, nu)
 dmstil <- function(x, lambda, delta, Ainv, nu, u, log.p = FALSE, control = list()) {
   .check.control(control)
   if (!"numLikSample" %in% names(control)) control$numLikSample <- 1e6

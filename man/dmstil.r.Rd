@@ -25,13 +25,3 @@ return a numeric vector of length n.
 \description{
 This function returns to likelihood function of restricted mstil.
 }
-\examples{
-# Not run:
-# data(RiverFlow)
-# k <- ncol(RiverFlow)
-# lambda <- diag(k)
-# delta <- rep(0,k)
-# Ainv <- diag(k)
-# nu <- 2
-# dmstil.r(as.matrix(log(RiverFlow)), lambda, delta, Ainv, nu)
-}

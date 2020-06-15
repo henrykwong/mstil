@@ -44,8 +44,3 @@ a list with components:
 \description{
 Clustering using mstil given a fixed number of clusters in parallel using random initial parameters.
 }
-\examples{
-# Not run:
-# data(RiverFlow)
-# cluster.fmmstil.K.parallel.random(as.matrix(log(RiverFlow)),2,2)
-}

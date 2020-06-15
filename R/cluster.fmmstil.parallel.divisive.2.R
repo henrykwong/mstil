@@ -13,7 +13,7 @@
 #' @examples
 #' # Not run:
 #' # data(RiverFlow)
-#' # cluster.fmmstil.parallel.divisive.2(as.matrix(log(RiverFlow)),2)
+#' # cluster.fmmstil.parallel.divisive.2(as.matrix(log(RiverFlow)))
 cluster.fmmstil.parallel.divisive.2 <- function(x, ncore = 1, criteria = c('ICL', 'BIC', 'AIC'), init.cluster.method, init.param.method, show.progress = TRUE, control = list()) {
   .check.control(control)
   if (missing(init.cluster.method))init.cluster.method <- .default.init.cluster.method.kmeans
